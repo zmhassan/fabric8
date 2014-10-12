@@ -21,7 +21,6 @@ import io.fabric8.api.FabricService;
 import io.fabric8.api.Profiles;
 import io.fabric8.api.jmx.ContainerDTO;
 import io.fabric8.core.jmx.Links;
-
 import java.net.URI;
 import java.util.List;
 
@@ -113,7 +112,8 @@ public class FabricDTO {
         answer.setProvisioningPending(container.isProvisioningPending());
         answer.setRoot(container.isRoot());
 
-        answer.setStartLink(baseApiLink + "/container/" + containerId + "/start");
+
+        answer.setLinks(baseApiLink,containerId );
         return answer;
     }
 

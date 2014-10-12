@@ -17,6 +17,8 @@ package io.fabric8.api.jmx;
 
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+
 
 /**
  * A DTO for the container metadata
@@ -57,11 +59,23 @@ public class ContainerDTO {
     private List<String> jmxDomains;
     private List<String> provisionList;
     private Long processId;
-    private String startLink;
+    private List<HrefResource> links;
+
+    public List<HrefResource> getLinks() {
+        return links;
+    }
+
+    public void setLinks(String baseApiLink, String containerId) {
+        List<HrefResource> hlist = new ArrayList<HrefResource>();
+        hlist.add(new HrefResource("Container Status","self",baseApiLink + "/container/" + containerId + "/status", "GET"));
+        hlist.add(new HrefResource("Start Container","self",baseApiLink + "/container/" + containerId + "/start", "POST"));
+        hlist.add(new HrefResource("Stop Container","self",baseApiLink + "/container/" + containerId + "/stop", "POST"));
+        hlist.add(new HrefResource("Delete Container","self",baseApiLink + "/container/" + containerId , "DELETE"));
+        this.links = hlist;
+    }
 
     public ContainerDTO() {
     }
-
 
     @Override
     public String toString() {
@@ -353,11 +367,5 @@ public class ContainerDTO {
         this.processId = processId;
     }
 
-    public String getStartLink() {
-        return startLink;
-    }
 
-    public void setStartLink(String startLink) {
-        this.startLink = startLink;
-    }
 }
