@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-     Copyright 2005-2014 Red Hat, Inc.
+     Copyright 2005-2015 Red Hat, Inc.
 
      Red Hat licenses this file to you under the Apache License, version
      2.0 (the "License"); you may not use this file except in compliance
@@ -16,13 +16,12 @@
      permissions and limitations under the License.
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <parent>
-    <groupId>io.fabric8</groupId>
-    <artifactId>fabric8-project</artifactId>
-    <version>1.2.0-SNAPSHOT</version>
-    <relativePath>../parent</relativePath>
+      <groupId>io.fabric8</groupId>
+      <artifactId>fabric8-parent</artifactId>
+      <version>2.2.41-SNAPSHOT</version>
+      <relativePath>../parent</relativePath>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
@@ -37,64 +36,39 @@
           <!-- maven-plugin-testing-harness only works with this version of maven -->
           <version>3.0.5</version>
       </dependency>
-      <!--
       <dependency>
-          <groupId>biz.aQute.bnd</groupId>
-          <artifactId>bndlib</artifactId>
-          <version>2.1.0</version>
+          <groupId>io.fabric8</groupId>
+          <artifactId>kubernetes-api</artifactId>
       </dependency>
       <dependency>
-          <groupId>org.ops4j.pax.url</groupId>
-          <artifactId>pax-url-wrap</artifactId>
-          <version>2.1.0</version>
-      </dependency>
-      -->
-      <dependency>
-          <groupId>org.apache.karaf.deployer</groupId>
-          <artifactId>org.apache.karaf.deployer.blueprint</artifactId>
+        <groupId>io.fabric8</groupId>
+        <artifactId>fabric8-devops-connector</artifactId>
       </dependency>
       <dependency>
-          <groupId>org.ops4j.pax.url</groupId>
-          <artifactId>pax-url-war</artifactId>
-          <version>2.1.0</version>
+          <groupId>io.fabric8</groupId>
+          <artifactId>gerrit-api</artifactId>
+      </dependency>
+
+      <dependency>
+        <groupId>org.hibernate</groupId>
+        <artifactId>hibernate-validator</artifactId>
       </dependency>
       <dependency>
-          <groupId>org.ops4j.pax.url</groupId>
-          <artifactId>pax-url-wrap</artifactId>
-          <version>2.1.0</version>
+        <groupId>org.hibernate</groupId>
+        <artifactId>hibernate-validator-cdi</artifactId>
       </dependency>
       <dependency>
-          <groupId>biz.aQute.bnd</groupId>
-          <artifactId>bndlib</artifactId>
-          <version>2.1.0</version>
+        <groupId>javax.el</groupId>
+        <artifactId>javax.el-api</artifactId>
       </dependency>
       <dependency>
-          <groupId>org.ops4j.pax.swissbox</groupId>
-          <artifactId>pax-swissbox-bnd</artifactId>
-          <version>1.7.1</version>
+        <groupId>org.glassfish.web</groupId>
+        <artifactId>javax.el</artifactId>
       </dependency>
-    <dependency>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>org.apache.felix.scr.annotations</artifactId>
-    </dependency>
+
     <dependency>
         <groupId>io.fabric8</groupId>
-        <artifactId>fabric-project-deployer</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>io.fabric8</groupId>
-        <artifactId>fabric-git</artifactId>
-        <exclusions>
-          <!-- lets avoid bringing in an old jar from jgit which clashes with jolokia client -->
-          <exclusion>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient</artifactId>
-          </exclusion>
-        </exclusions>
-    </dependency>
-    <dependency>
-        <groupId>io.fabric8</groupId>
-        <artifactId>fabric-utils</artifactId>
+        <artifactId>fabric8-utils</artifactId>
       <exclusions>
         <exclusion>
           <groupId>org.apache.karaf.features</groupId>
@@ -107,32 +81,17 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.osgi</groupId>
-      <artifactId>org.osgi.enterprise</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
         <groupId>org.jolokia</groupId>
         <artifactId>jolokia-client-java</artifactId>
-        <version>${jolokia-version}</version>
+        <version>${jolokia.version}</version>
     </dependency>
+
     <dependency>
-        <groupId>org.apache.karaf</groupId>
-        <artifactId>apache-karaf</artifactId>
-        <version>${karaf-version}</version>
-        <type>zip</type>
-        <exclusions>
-            <exclusion>
-                <groupId>*</groupId>
-                <artifactId>*</artifactId>
-            </exclusion>
-        </exclusions>
+      <groupId>org.eclipse.jgit</groupId>
+      <artifactId>org.eclipse.jgit</artifactId>
+      <version>${jgit.version}</version>
     </dependency>
-    <dependency>
-      <groupId>org.apache.felix</groupId>
-      <artifactId>org.apache.felix.metatype</artifactId>
-      <version>${felix-metatype-version}</version>
-    </dependency>
+
 
     <!-- maven plugin dependencies -->
     <dependency>
@@ -190,13 +149,17 @@
       <version>2.0</version>
     </dependency>
 
+
+
     <!-- Testing -->
-
-
-
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
 
@@ -214,10 +177,16 @@
   <build>
     <resources>
       <resource>
-        <directory>src/test/fabric8</directory>
-        <filtering>true</filtering>
+        <directory>src/main/resources</directory>
+        <filtering>false</filtering>
       </resource>
     </resources>
+    <testResources>
+      <testResource>
+        <directory>src/test/fabric8</directory>
+        <filtering>true</filtering>
+      </testResource>
+    </testResources>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -227,7 +196,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-plugin-plugin</artifactId>
-        <version>3.2</version>
+        <version>${maven-plugin-plugin.version}</version>
         <configuration>
           <!-- see http://jira.codehaus.org/browse/MNG-5346 -->
           <skipErrorNoDescriptorsFound>true</skipErrorNoDescriptorsFound>
@@ -256,7 +225,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-plugin-plugin</artifactId>
-        <version>3.2</version>
+        <version>${maven-plugin-plugin.version}</version>
       </plugin>
     </plugins>
   </reporting>

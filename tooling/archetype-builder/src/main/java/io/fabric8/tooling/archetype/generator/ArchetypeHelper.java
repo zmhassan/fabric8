@@ -1,5 +1,5 @@
 /**
- *  Copyright 2005-2014 Red Hat, Inc.
+ *  Copyright 2005-2015 Red Hat, Inc.
  *
  *  Red Hat licenses this file to you under the Apache License, version
  *  2.0 (the "License"); you may not use this file except in compliance
@@ -40,8 +40,8 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
-import io.fabric8.common.util.IOHelpers;
-import io.fabric8.common.util.Strings;
+import io.fabric8.utils.IOHelpers;
+import io.fabric8.utils.Strings;
 import org.apache.commons.io.IOUtils;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;

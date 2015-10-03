@@ -1,5 +1,5 @@
 /**
- *  Copyright 2005-2014 Red Hat, Inc.
+ *  Copyright 2005-2015 Red Hat, Inc.
  *
  *  Red Hat licenses this file to you under the Apache License, version
  *  2.0 (the "License"); you may not use this file except in compliance
@@ -28,9 +28,8 @@ import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.xml.transform.stream.StreamSource;
 
-import io.fabric8.api.scr.AbstractComponent;
-import io.fabric8.common.util.JMXUtils;
-import io.fabric8.common.util.Strings;
+import io.fabric8.utils.JMXUtils;
+import io.fabric8.utils.Strings;
 import io.fabric8.tooling.archetype.catalog.Archetype;
 import io.fabric8.tooling.archetype.catalog.Archetypes;
 import org.apache.felix.scr.annotations.Activate;
@@ -45,9 +44,9 @@ import org.slf4j.LoggerFactory;
 
 @Component(name = "io.fabric8.tooling.archetype.ArchetypeService", label = "Fabric8 Archetype Service",
     description = "Generates projects from Maven Archetypes.",
-    policy = ConfigurationPolicy.OPTIONAL, immediate = true, metatype = true)
+    policy = ConfigurationPolicy.OPTIONAL, immediate = true, metatype = false)
 @Service(ArchetypeService.class)
-public class ArchetypeServiceImpl extends AbstractComponent implements ArchetypeService {
+public class ArchetypeServiceImpl implements ArchetypeService {
 
     private static final transient Logger LOG = LoggerFactory.getLogger(ArchetypeServiceImpl.class);
     public static ObjectName OBJECT_NAME;
@@ -73,7 +72,6 @@ public class ArchetypeServiceImpl extends AbstractComponent implements Archetype
         if (mbeanServer != null) {
             JMXUtils.registerMBean(this, mbeanServer, OBJECT_NAME);
         }
-        activateComponent();
 
         URL catalog = componentContext.getBundleContext().getBundle().getResource("archetype-catalog.xml");
         Archetypes archetypes = (Archetypes) Archetypes.newUnmarshaller().unmarshal(new StreamSource(catalog.openStream()));
@@ -87,7 +85,6 @@ public class ArchetypeServiceImpl extends AbstractComponent implements Archetype
         if (mbeanServer != null) {
             JMXUtils.unregisterMBean(mbeanServer, OBJECT_NAME);
         }
-        deactivateComponent();
     }
 
     @Override
@@ -99,6 +96,10 @@ public class ArchetypeServiceImpl extends AbstractComponent implements Archetype
         }
 
         return answer;
+    }
+
+    private void assertValid() {
+        // TODO - no longer using core fabric DS component...
     }
 
     @Override

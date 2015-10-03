@@ -1,0 +1,333 @@
+/**
+ *  Copyright 2005-2015 Red Hat, Inc.
+ *
+ *  Red Hat licenses this file to you under the Apache License, version
+ *  2.0 (the "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ *  implied.  See the License for the specific language governing
+ *  permissions and limitations under the License.
+ */
+package io.fabric8.forge.devops.setup;
+
+import io.fabric8.forge.addon.utils.MavenHelpers;
+import io.fabric8.forge.addon.utils.VersionHelper;
+import io.fabric8.forge.addon.utils.validator.ClassNameValidator;
+import io.fabric8.forge.devops.AbstractDevOpsCommand;
+import io.fabric8.utils.Strings;
+import org.apache.maven.model.Model;
+import org.jboss.forge.addon.dependencies.Dependency;
+import org.jboss.forge.addon.dependencies.builder.DependencyBuilder;
+import org.jboss.forge.addon.facets.FacetFactory;
+import org.jboss.forge.addon.facets.constraints.FacetConstraint;
+import org.jboss.forge.addon.maven.plugins.ExecutionBuilder;
+import org.jboss.forge.addon.maven.plugins.MavenPlugin;
+import org.jboss.forge.addon.maven.plugins.MavenPluginBuilder;
+import org.jboss.forge.addon.maven.projects.MavenFacet;
+import org.jboss.forge.addon.maven.projects.MavenPluginFacet;
+import org.jboss.forge.addon.projects.Project;
+import org.jboss.forge.addon.projects.dependencies.DependencyInstaller;
+import org.jboss.forge.addon.projects.facets.ResourcesFacet;
+import org.jboss.forge.addon.resource.ResourceFactory;
+import org.jboss.forge.addon.templates.TemplateFactory;
+import org.jboss.forge.addon.ui.context.UIBuilder;
+import org.jboss.forge.addon.ui.context.UIContext;
+import org.jboss.forge.addon.ui.context.UIExecutionContext;
+import org.jboss.forge.addon.ui.context.UINavigationContext;
+import org.jboss.forge.addon.ui.input.UIInput;
+import org.jboss.forge.addon.ui.input.UISelectOne;
+import org.jboss.forge.addon.ui.input.ValueChangeListener;
+import org.jboss.forge.addon.ui.input.events.ValueChangeEvent;
+import org.jboss.forge.addon.ui.metadata.WithAttributes;
+import org.jboss.forge.addon.ui.result.NavigationResult;
+import org.jboss.forge.addon.ui.result.Result;
+import org.jboss.forge.addon.ui.result.Results;
+import org.jboss.forge.addon.ui.wizard.UIWizardStep;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Properties;
+import java.util.Set;
+import java.util.concurrent.Callable;
+
+import static io.fabric8.forge.addon.utils.MavenHelpers.ensureMavenDependencyAdded;
+import static io.fabric8.forge.devops.setup.DockerSetupHelper.hasSpringBootMavenPlugin;
+
+@FacetConstraint({MavenFacet.class, MavenPluginFacet.class, ResourcesFacet.class})
+public class Fabric8SetupStep extends AbstractDevOpsCommand implements UIWizardStep {
+    private static final transient Logger LOG = LoggerFactory.getLogger(Fabric8SetupStep.class);
+
+    private String[] jarImages = new String[]{"fabric8/java"};
+    private String[] bundleImages = new String[]{"fabric8/karaf-2.4"};
+    private String[] warImages = new String[]{"fabric8/tomcat-8.0", "jboss/wildfly"};
+
+    @Inject
+    @WithAttributes(label = "from", required = true, description = "The docker image to use as base line")
+    private UISelectOne<String> from;
+
+    @Inject
+    @WithAttributes(label = "main", required = false, description = "Main class to use for Java standalone")
+    private UIInput<String> main;
+
+    @Inject
+    @WithAttributes(label = "container", required = false, description = "Container name to use for the app")
+    private UIInput<String> container;
+
+    @Inject
+    @WithAttributes(label = "group", required = false, description = "Group label to use for the app")
+    private UIInput<String> group;
+
+    @Inject
+    @WithAttributes(label = "icon", required = false, description = "Icon to use for the app")
+    private UISelectOne<String> icon;
+
+    @Inject
+    @WithAttributes(label = "test", required = false, defaultValue = "true", description = "Include test dependencies")
+    private UIInput<Boolean> test;
+
+    @Inject
+    private DependencyInstaller dependencyInstaller;
+
+    @Inject
+    private TemplateFactory factory;
+
+    @Inject
+    ResourceFactory resourceFactory;
+
+    @Inject
+    FacetFactory facetFactory;
+
+    @Override
+    public boolean isEnabled(UIContext context) {
+        // this is a step in a wizard, you cannot run this standalone
+        return false;
+    }
+
+    @Override
+    public NavigationResult next(UINavigationContext context) throws Exception {
+        return null;
+    }
+
+
+    @Override
+    public void initializeUI(final UIBuilder builder) throws Exception {
+        LOG.info("Getting the current project");
+        Project project = getCurrentSelectedProject(builder.getUIContext());
+
+        LOG.info("Got the current project");
+
+        String packaging = getProjectPackaging(project);
+
+        boolean springBoot = hasSpringBootMavenPlugin(project);
+
+        // limit the choices depending on the project packaging
+        List<String> choices = new ArrayList<String>();
+        if (packaging == null || springBoot || "jar".equals(packaging)) {
+            choices.add(jarImages[0]);
+        }
+        if (packaging == null || "bundle".equals(packaging)) {
+            choices.add(bundleImages[0]);
+        }
+        if (!springBoot && (packaging == null || "war".equals(packaging))) {
+            choices.add(warImages[0]);
+            choices.add(warImages[1]);
+        }
+        from.setValueChoices(choices);
+
+        // is it possible to pre select a choice?
+        if (choices.size() > 0) {
+            String defaultChoice = choices.get(0);
+            if (defaultChoice != null) {
+                from.setDefaultValue(defaultChoice);
+            }
+        }
+
+        from.addValueChangeListener(new ValueChangeListener() {
+            @Override
+            public void valueChanged(ValueChangeEvent event) {
+                // use a listener so the jube step knows what we selected as it want to reuse
+                builder.getUIContext().getAttributeMap().put("docker.from", event.getNewValue());
+            }
+        });
+        builder.add(from);
+
+        if (packaging == null || (!packaging.equals("war") && !packaging.equals("ear"))) {
+            boolean jarImage = DockerSetupHelper.isJarImage(from.getValue());
+            // TODO until we can detect reliably executable JARS versus mains lets not make this mandatory
+/*
+            main.setRequired(new Callable<Boolean>() {
+                @Override
+                public Boolean call() throws Exception {
+                    return jarImage;
+                }
+            });
+*/
+            // only enable main if its required
+            // TODO we could disable if we knew this was an executable jar
+            main.setEnabled(jarImage);
+            if (project != null) {
+                main.setDefaultValue(DockerSetupHelper.defaultMainClass(project));
+            }
+            main.addValidator(new ClassNameValidator(true));
+            main.addValueChangeListener(new ValueChangeListener() {
+                @Override
+                public void valueChanged(ValueChangeEvent event) {
+                    // use a listener so the jube step knows what we selected as it want to reuse
+                    builder.getUIContext().getAttributeMap().put("docker.main", event.getNewValue());
+                }
+            });
+            builder.add(main);
+        }
+
+
+        container.setDefaultValue(new Callable<String>() {
+            @Override
+            public String call() throws Exception {
+                String from = (String) builder.getUIContext().getAttributeMap().get("docker.from");
+                if (from != null) {
+                    return asContainer(from);
+                }
+                return null;
+            }
+        });
+
+        // the from image values
+        icon.setValueChoices(new Iterable<String>() {
+            @Override
+            public Iterator<String> iterator() {
+                Set<String> choices = new LinkedHashSet<String>();
+                choices.add("activemq");
+                choices.add("camel");
+                choices.add("java");
+                choices.add("jetty");
+                choices.add("karaf");
+                choices.add("mule");
+                choices.add("tomcat");
+                choices.add("tomee");
+                choices.add("weld");
+                choices.add("wildfly");
+                return choices.iterator();
+            }
+        });
+        icon.setDefaultValue(new Callable<String>() {
+            @Override
+            public String call() throws Exception {
+                if (container.getValue() != null) {
+                    for (String choice : icon.getValueChoices()) {
+                        if (choice.equals(container.getValue())) {
+                            return choice;
+                        }
+                    }
+                }
+                return null;
+            }
+        });
+
+        group.setDefaultValue(new Callable<String>() {
+            @Override
+            public String call() throws Exception {
+                // use the project name as default value
+                return null;
+            }
+        });
+
+        builder.add(test).add(icon).add(group).add(container);
+    }
+
+    @Override
+    public Result execute(UIExecutionContext context) throws Exception {
+        LOG.info("starting to setup fabric8 project");
+        Project project = getCurrentSelectedProject(context.getUIContext());
+        MavenFacet maven = project.getFacet(MavenFacet.class);
+        Model pom = maven.getModel();
+
+        DockerSetupHelper.setupDocker(project, from.getValue(), main.getValue());
+
+        LOG.info("docker now setup");
+
+        // make sure we have resources as we need it later
+        facetFactory.install(project, ResourcesFacet.class);
+
+        // install fabric8 bom
+
+        // include test dependencies?
+        LOG.info("checking dependencies");
+
+        if (test.getValue() != null && test.getValue()) {
+            boolean hasFabric8Arquillian = !MavenHelpers.hasDependency(pom, "io.fabric8", "fabric8-arquillian");
+            boolean hasArquillianJunitContainer = !MavenHelpers.hasDependency(pom, "org.jboss.arquillian.junit", "arquillian-junit-container");
+
+
+            // I guess we only need to add this import if we add a test case?
+            // unless the app is using fabric8-cdi or something?
+            if (!hasFabric8Arquillian || !hasArquillianJunitContainer) {
+                if (!MavenHelpers.hasManagedDependency(pom, "io.fabric8", "fabric8-project")) {
+                    Dependency bom = DependencyBuilder.create()
+                            .setCoordinate(MavenHelpers.createCoordinate("io.fabric8", "fabric8-project", VersionHelper.fabric8Version(), "pom"))
+                            .setScopeType("import");
+                    dependencyInstaller.installManaged(project, bom);
+                }
+            }
+            ensureMavenDependencyAdded(project, dependencyInstaller, "io.fabric8", "fabric8-arquillian", "test");
+            ensureMavenDependencyAdded(project, dependencyInstaller, "org.jboss.arquillian.junit", "arquillian-junit-container", "test");
+        }
+
+        if (!MavenHelpers.hasMavenPlugin(pom, "io.fabric8", "fabric8-maven-plugin")) {
+            // add fabric8 plugin
+            MavenPluginFacet pluginFacet = project.getFacet(MavenPluginFacet.class);
+            MavenPlugin plugin = MavenPluginBuilder.create()
+                    .setCoordinate(MavenHelpers.createCoordinate("io.fabric8", "fabric8-maven-plugin", VersionHelper.fabric8Version()))
+                    .addExecution(ExecutionBuilder.create().setId("json").addGoal("json"))
+                    .addExecution(ExecutionBuilder.create().setId("zip").addGoal("zip"));
+            pluginFacet.addPlugin(plugin);
+        }
+
+        // update properties section in pom.xml
+        Properties properties = pom.getProperties();
+        boolean updated = false;
+        updated = MavenHelpers.updatePomProperty(properties, "fabric8.label.container", container.getValue(), updated);
+        String iconValue = icon.getValue();
+        if (Strings.isNotBlank(iconValue)) {
+            updated = MavenHelpers.updatePomProperty(properties, "fabric8.iconRef", "icons/" + iconValue, updated);
+        }
+        updated = MavenHelpers.updatePomProperty(properties, "fabric8.label.group", group.getValue(), updated);
+
+        // to save then set the model
+        if (updated) {
+            maven.setModel(pom);
+            LOG.info("updated pom.xml");
+        }
+
+        return Results.success("Adding Fabric8 maven support with base Docker image: " + from.getValue());
+    }
+
+    private static String asContainer(String fromImage) {
+        int idx = fromImage.indexOf('/');
+        if (idx > 0) {
+            fromImage = fromImage.substring(idx + 1);
+        }
+        idx = fromImage.indexOf('-');
+        if (idx > 0) {
+            fromImage = fromImage.substring(0, idx);
+        }
+        return fromImage;
+    }
+
+    private static String getProjectPackaging(Project project) {
+        if (project != null) {
+            MavenFacet maven = project.getFacet(MavenFacet.class);
+            return maven.getModel().getPackaging();
+        }
+        return null;
+    }
+}

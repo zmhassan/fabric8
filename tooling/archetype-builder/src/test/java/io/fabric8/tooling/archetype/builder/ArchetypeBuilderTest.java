@@ -1,5 +1,5 @@
 /**
- *  Copyright 2005-2014 Red Hat, Inc.
+ *  Copyright 2005-2015 Red Hat, Inc.
  *
  *  Red Hat licenses this file to you under the Apache License, version
  *  2.0 (the "License"); you may not use this file except in compliance
@@ -60,7 +60,7 @@ public class ArchetypeBuilderTest {
         builder.configure();
         try {
             List<String> dirs = new ArrayList<String>();
-            builder.generateArchetypes("java", srcDir, new File(basedir, "target/test-archetypes"), true, dirs, null);
+            builder.generateArchetypes("java", srcDir, new File(basedir, "target/test-archetypes"), true, dirs);
         } finally {
             LOG.info("Completed the generation. Closing!");
             builder.close();

@@ -1,14 +1,33 @@
-#!/bin/sh
+#!/bin/bash
 
 echo ============================================================================
 echo Deploying fabric8 website
 echo ============================================================================
-rm -rf fabric8
 
-git clone git@github.com:fabric8io/fabric8.git fabric8 && \
-cd fabric8 && \
 cd website && \
-mvn clean scalate:sitegen && \
-mkdir target/sitegen/gitbook && \
-gitbook build ../docs --output=target/sitegen/gitbook && \
-mvn scalate:deploy
+npm install -g gitbook-cli && \
+npm install && \
+mvn clean && \
+mkdir -p target && \
+cd target && \
+git clone -b gh-pages git@github.com:fabric8io/fabric8.git sitegen && \
+cd .. && \
+mvn scalate:sitegen && \
+mkdir -p target/sitegen/guide && \
+mkdir -p ../docs/_book && \
+gitbook install ../docs  && \
+gitbook build ../docs && \
+echo "copying generated gitbook"
+cp -rv ../docs/_book/* target/sitegen/guide && \
+cd target/sitegen && \
+git add * guide/* && \
+git commit -m "generated website" && \
+git push origin gh-pages
+
+#gitbook install ../docs --output=target/sitegen/guide && \
+
+
+echo ============================================================================
+echo Deployed fabric8 website
+echo ============================================================================
+

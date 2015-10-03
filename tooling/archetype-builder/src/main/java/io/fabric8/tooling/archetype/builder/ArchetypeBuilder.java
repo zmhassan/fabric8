@@ -1,5 +1,5 @@
 /**
- *  Copyright 2005-2014 Red Hat, Inc.
+ *  Copyright 2005-2015 Red Hat, Inc.
  *
  *  Red Hat licenses this file to you under the Apache License, version
  *  2.0 (the "License"); you may not use this file except in compliance
@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import io.fabric8.tooling.archetype.ArchetypeUtils;
+import io.fabric8.utils.Strings;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -165,7 +166,7 @@ public class ArchetypeBuilder {
      * @param clean regenerate the archetypes (clean the archetype target dir)?
      * @throws IOException
      */
-    public void generateArchetypes(String containerType, File baseDir, File outputDir, boolean clean, List<String> dirs, File karafProfileDir) throws IOException {
+    public void generateArchetypes(String containerType, File baseDir, File outputDir, boolean clean, List<String> dirs) throws IOException {
         LOG.debug("Generating archetypes from {} to {}", baseDir.getCanonicalPath(), outputDir.getCanonicalPath());
         File[] files = baseDir.listFiles();
         if (files != null) {
@@ -173,20 +174,29 @@ public class ArchetypeBuilder {
                 if (file.isDirectory()) {
                     File projectDir = file;
                     File projectPom = new File(projectDir, "pom.xml");
-                    if (projectPom.exists() && !skipImport(projectDir) && archetypeUtils.isValidProjectPom(projectPom)) {
-                        String fileName = file.getName();
-                        String archetypeDirName = fileName.replace("example", "archetype");
-                        if (fileName.equals(archetypeDirName)) {
-                            archetypeDirName += "-archetype";
-                        }
-                        archetypeDirName = containerType + "-" + archetypeDirName;
+                    if (projectPom.exists() && !skipImport(projectDir)) {
+                        if (archetypeUtils.isValidProjectPom(projectPom)) {
+                            String fileName = file.getName();
+                            String archetypeDirName = fileName.replace("example", "archetype");
+                            if (fileName.equals(archetypeDirName)) {
+                                archetypeDirName += "-archetype";
+                            }
+                            archetypeDirName = containerType + "-" + archetypeDirName;
 
-                        File archetypeDir = new File(outputDir, archetypeDirName);
-                        generateArchetype(projectDir, projectPom, archetypeDir, clean, dirs);
+                            File archetypeDir = new File(outputDir, archetypeDirName);
+                            generateArchetype(projectDir, projectPom, archetypeDir, clean, dirs);
 
-                        File archetypePom = new File(archetypeDir, "pom.xml");
-                        if (archetypePom.exists()) {
-                            addArchetypeMetaData(archetypePom, archetypeDirName);
+                            File archetypePom = new File(archetypeDir, "pom.xml");
+                            if (archetypePom.exists()) {
+                                addArchetypeMetaData(archetypePom, archetypeDirName);
+                            }
+                        } else {
+                            // lets iterate through the children
+                            String childContainerType = file.getName();
+                            if (Strings.isNotBlank(containerType)) {
+                                childContainerType = containerType + "-" + childContainerType;
+                            }
+                            generateArchetypes(childContainerType, file, outputDir, clean, dirs);
                         }
                     }
                 }
@@ -245,8 +255,6 @@ public class ArchetypeBuilder {
         // package names replaced with variable placeholders - to make them parameterizable during
         // mvn archetype:generate
         File archetypeOutputDir = new File(archetypeDir, "src/main/resources/archetype-resources");
-        // optional archetype-metadata.xml provided by source project
-//        File metadataXmlFile = new File(projectDir, "archetype-metadata.xml");
         // target archetype-metadata.xml file. it'll end in resources-filtered, so most of variables will be replaced
         // during the build of archetype project
         File metadataXmlOutFile = new File(archetypeDir, "src/main/resources-filtered/META-INF/maven/archetype-metadata.xml");
@@ -283,26 +291,40 @@ public class ArchetypeBuilder {
                 // lets recursively copy files replacing the package names
                 File outputMainSrc = new File(archetypeOutputDir, archetypeUtils.relativePath(projectDir, mainSrcDir));
                 copyCodeFiles(rootPackage, outputMainSrc, replaceFunction);
+            }
+        }
 
-                // tests copied only if there's something in "src/main"
+        File testSrcDir = null;
+        for (String it : ArchetypeUtils.sourceCodeDirNames) {
+            File dir = new File(testDir, it);
+            if (dir.exists()) {
+                testSrcDir = dir;
+                break;
+            }
+        }
 
-                File testSrcDir = null;
-                for (String it : ArchetypeUtils.sourceCodeDirNames) {
-                    File dir = new File(testDir, it);
-                    if (dir.exists()) {
-                        testSrcDir = dir;
-                        break;
+        if (testSrcDir != null) {
+            File rootPackage = archetypeUtils.findRootPackage(testSrcDir);
+
+            if (rootPackage != null) {
+                String packagePath = archetypeUtils.relativePath(testSrcDir, rootPackage);
+                String packageName = packagePath.replace(File.separatorChar, '.');
+                LOG.debug("Found root package in {}: {}", testSrcDir, packageName);
+                final String regex = packageName.replace(".", "\\.");
+
+                replaceFunction = new Replacement() {
+                    @Override
+                    public String replace(String token) {
+                        return token.replaceAll(regex, "\\${package}");
                     }
-                }
+                };
 
-                if (testSrcDir != null) {
-                    File rootTestDir = new File(testSrcDir, packagePath);
-                    File outputTestSrc = new File(archetypeOutputDir, archetypeUtils.relativePath(projectDir, testSrcDir));
-                    if (rootTestDir.exists()) {
-                        copyCodeFiles(rootTestDir, outputTestSrc, replaceFunction);
-                    } else {
-                        copyCodeFiles(testSrcDir, outputTestSrc, replaceFunction);
-                    }
+                File rootTestDir = new File(testSrcDir, packagePath);
+                File outputTestSrc = new File(archetypeOutputDir, archetypeUtils.relativePath(projectDir, testSrcDir));
+                if (rootTestDir.exists()) {
+                    copyCodeFiles(rootTestDir, outputTestSrc, replaceFunction);
+                } else {
+                    copyCodeFiles(testSrcDir, outputTestSrc, replaceFunction);
                 }
             }
         }
@@ -421,15 +443,8 @@ public class ArchetypeBuilder {
                 }
             }
 
-            String profile = replaceNodeValue(doc, root, "fabric8.profile", "${fabric8-profile}");
-            if (profile != null) {
-                // we do not want a default name for the profile as the end user should be able to set that value
-                // and use fabric8-profile as key as there is a problem when using fabric8.profile
-                propertyNameSet.put("fabric8-profile", null);
-            }
-
             // now lets replace the contents of some elements (adding new elements if they are not present)
-            List<String> beforeNames = Arrays.asList("artifactId", "version", "packaging", "name", "properties", "fabric8-profile");
+            List<String> beforeNames = Arrays.asList("artifactId", "version", "packaging", "name", "properties");
             replaceOrAddElementText(doc, root, "version", "${version}", beforeNames);
             replaceOrAddElementText(doc, root, "artifactId", "${artifactId}", beforeNames);
             replaceOrAddElementText(doc, root, "groupId", "${groupId}", beforeNames);
@@ -570,7 +585,7 @@ public class ArchetypeBuilder {
                 elements.add((Element) children.item(cn));
             }
         }
-        Element element = null;
+        Element element;
         if (elements.isEmpty()) {
             Element newElement = doc.createElement(name);
             Node first = null;
@@ -581,7 +596,7 @@ public class ArchetypeBuilder {
                 }
             }
 
-            Node node = null;
+            Node node;
             if (first != null) {
                 node = first;
             } else {
@@ -604,7 +619,6 @@ public class ArchetypeBuilder {
 
         String groupId = "io.fabric8.archetypes";
         String artifactId = archetypeUtils.firstElementText(root, "artifactId", outputName);
-        String name = archetypeUtils.firstElementText(root, "name", "");
         String description = archetypeUtils.firstElementText(root, "description", "");
         String version = "";
 
@@ -616,16 +630,12 @@ public class ArchetypeBuilder {
             version = archetypeUtils.firstElementText(root, "version", "");
         }
 
-        String repo = "https://repo.fusesource.com/nexus/content/groups/public";
-
         printWriter.println(String.format(indent + indent + "<archetype>\n" +
             indent + indent + indent + "<groupId>%s</groupId>\n" +
             indent + indent + indent + "<artifactId>%s</artifactId>\n" +
             indent + indent + indent + "<version>%s</version>\n" +
-            indent + indent + indent + "<repository>%s</repository>\n" +
-            indent + indent + indent + "<name>%s</name>\n" +
             indent + indent + indent + "<description>%s</description>\n" +
-            indent + indent + "</archetype>", groupId, artifactId, version, repo, name, description));
+            indent + indent + "</archetype>", groupId, artifactId, version, description));
     }
 
     /**
@@ -697,20 +707,6 @@ public class ArchetypeBuilder {
                     for (String name: names) {
                         copyOtherFiles(projectDir, new File(srcDir, name), new File(outDir, name), replaceFn);
                     }
-                }
-            }
-        }
-    }
-
-    private void copyDataFiles(File projectDir, File srcDir, File outDir, Replacement replaceFn) throws IOException {
-        if (srcDir.isFile()) {
-            copyFile(srcDir, outDir, replaceFn);
-        } else {
-            outDir.mkdirs();
-            String[] names = srcDir.list();
-            if (names != null) {
-                for (String name: names) {
-                    copyDataFiles(projectDir, new File(srcDir, name), new File(outDir, name), replaceFn);
                 }
             }
         }

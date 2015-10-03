@@ -1,69 +1,41 @@
 ## Overview
 
-**fabric8** (pronounced _fabricate_) is designed to make it really easy to deploy your Java integration solutions and services on a number of machines, containers, processes, and JVMs. Then once they are provisioned you can easily:
-
-* visualise what is running to understand your platform
-* easily configure and monitor whats running
-* automatically discover services running in the fabric (through a runtime registry)
-* load balance
-* provide leader election, master/slave coordination
-* scale up or down specific [profiles](profiles.html) based on [RHQ](http://www.jboss.org/rhq)/[JON](http://www.redhat.com/products/jbossenterprisemiddleware/operations-network/) alerts based on key performance metrics (e.g. queue depths, throughput rates, latency etc)
-* make configuration, composition or version changes in a big bang approach (all relevant containers updates change immediately on each change) or
-* [rolling upgrades](rollingUpgrade.html) so you can stage when things update and which containers you wish to update when.
-
-We've designed **fabric8**  to be very lightweight (just run one or a few JVMs, no database required) and cloud friendly. So fabric8 works great whether you:
-
-* run Java processes directly on your own hardware without any kind of cloud or virtualisation technology
-* use a PaaS (Platform as a Service) such as <a href="https://www.openshift.com/products/online">OpenShift Online</a> for the public cloud or <a href="https://www.openshift.com/products/enterprise">OpenShift Enterprise</a> for the private on premise cloud
-* you are using OpenStack as an IaaS (Infrastructure as a Service) to create compute nodes and manage storage and networks
-* use Amazon Web Services, Rackspace or some other IaaS directly to run your services
-* use [docker](http://docker.io/) containers to abstract how you run services (as a virtualisation alternative)
-* use an open hybrid cloud of all the above.
-
-### Motivation
-
-Increasingly systems are getting bigger, more complex, dynamic and cloud-ready. Namely we're booting up systems quicker and we want them to be more automated and elastic without the need for manual intervention. The old days of having 2 boxes with a few XML config files on each box managed by hand are fast becoming the death to business relying heavily on IT (all businesses).
-
-When things are more elastic, cloud-ready, and dynamic, host names and IP addresses tend to be generated on the fly; so your system needs to use more _discovery_ to find things.
-
-e.g. if you're using some messaging you should discover dynamically where your message brokers are at runtime rather than hand-coding some host names / IP addresses in config files. This makes it easier to provision and configure in a more agile way; plus you can dynamically add more message brokers as you need them (so you become more elastic).
-
-In addition, if each machine has a separate set of config files edited by hand, as soon as the number of folks in your team and number of machines increases, things become unmanageable. You want all configuration centrally managed and audited with version control and the ability to see who changed what, when, see a diff of exactly what changed, and to revert bad changes, do [rolling upgrades](rollingUpgrade.html) and so forth.
-
-The Ideal workflow is to perform _continuous deployment_ of changes to configuration and software versions; when those changes have passed the _continuous integration_ tests (maybe with people voting too along with Jenkins) to auto-merge changes from the edit repo into the production repo and have the fabric update itself dynamically.
-
-### History
-ServiceMix is also an open-source ESB based on Apache Camel and ActiveMQ. So how does this relate to Fabric8?
-
-ServiceMix is the genesis of the current JBoss Fuse/Fabric8. It started off 9 or so years ago as an implementation of an EnterpriseServiceBus (ESB) based on the Java Business Integration spec. It’s goal was to provide a pluggable component architecture with a normalized messaging backbone that would adhere to standard interfaces and canonical XML data formats. ServiceMix gained a lot of popularity, despite JBI being a overly ceremonious spec (lots and lots of XML descriptors, packaging demands, etc). But, despite most products/projects offering integration services as a large, complex container, the need for routing, transformation, integrating with external systems, etc. shows up outside of that complex “ESB” environment as well :)
-
-Around the SMX 3.x and 4.x timeframe, the project underwent some major refactoring. The JBI implementation was ripped out and simplified with routing/mediation DSL that would later become Apache Camel. This way the “heart” of the “ESB” could be used in other projects (ActiveMQ, stand alone, etc). Additionally, the core container also moved away from JBI and toward OSGi. Still later, the actual OSGi container was refactored out into its own project, now known as Karaf. So ServiceMix became less its own project and really a packaging of other projects like ActiveMQ, Karaf (which used to be core SMX) and Camel (which used to be core SMX). The older versions of JBoss Fuse (Fuse ESB/Fuse Enterprise) where basically a hardening of SMX which was already a repackaging of some Apache projects. Additionally a lot of the core developers working on SMX also moved toward contributing to the constituent pieces and not necessarily the core SMX.
-
-Fabric8 takes the “ESB” or “integration” spirit of ServiceMix and adds a nice management UI (HawtIO), and all of the DevOpsy, and paints a clear path toward large-scale deployments and _continuous delivery_
-
-### Concepts
-
-The concepts behind **fabric8** are pretty simple, they are:
+<strong>fabric8</strong> is an open source <a href="http://fabric8.io/guide/fabric8DevOps.html">DevOps</a> and <a href="http://fabric8.io/guide/ipaas.html">Integration Platform</a> which is built as a reusable set of microservices that run on top of <a href="http://kubernetes.io/">Kubernetes</a> and <a href="http://www.openshift.org/">OpenShift V3</a>
 
 
-#### Git for configuration
+### [Fabric8 DevOps](fabric8DevOps.html)
 
-Fabric8 uses [git](http://git-scm.com/) as the _distributed version control_ mechanism [for all configuration](git.html). This means that all changes are versioned and replicated onto each machine with a full audit history of who changed what and when.
+[Fabric8 DevOps](fabric8DevOps.html) provides:
 
-In addition its easy to reuse any of the existing git tooling to perform diffs, merges and continuous integration. For more detail see [how to use git and fabric8](git.html)
+* <a href="http://fabric8.io/guide/cdelivery.html">Continuous Integration and Continous Delivery</a> to help you deliver software faster and more reliably using <a href="https://jenkins-ci.org/">Jenkins</a> with a [Jenkins Workflow Library](jenkinsWorkflowLibrary.html) for reusable CD pipelines with integrated <a href="http://fabric8.io/guide/chat.html">Chat</a> and <a href="http://fabric8.io/guide/chaosMonkey.html">Chaos Monkey</a>
 
-Fabric8 actually implements a [distributed git fabric](git.html) with no single point of failure or configuration change loss. A master node is elected which becomes the remote git repository; all configuration changes are pushed to the master and pulled from it so each node stays in sync. If the master node dies, the fabric fails over to another node. So there is no single point of failure, central server or infrastructure required (just a couple of JVMs is all you need for fabric8).
+* <a href="http://fabric8.io/guide/management.html">Management</a> of your applications with a powerful <a href="http://fabric8.io/guide/console.html">Console</a> with centralised <a href="http://fabric8.io/guide/logging.html">Logging</a> and <a href="http://fabric8.io/guide/metrics.html">Metrics</a> along with deep management of Java Containers using <a href="http://hawt.io/">Hawtio</a> and <a href="http://jolokia.org/">Jolokia</a>
 
-We make use of git branches to implement [rolling upgrades](rollingUpgrade.html); each version maps to a branch in git. So we can individually move containers from version to version (or branch to branch) to implement rolling upgrades.
+### [Fabric8 iPaaS](ipaas.html)
 
-#### Use Profiles for DRY configuration
+[Fabric8 iPaaS](ipaas.html) is an <i>Integration Platform As A Service</i> with <a href="http://fabric8.io/guide/console.html">deep visualisation</a> of your <a href="http://camel.apache.org/">Apache Camel</a> integration services, an <a href="http://fabric8.io/guide/apiRegistry.html">API Registry</a> to view of all your RESTful &amp; SOAP APIs and <a href="http://fabric8.io/guide/fabric8MQ.html">Fabric8 MQ</a> provides <i>Messaging As A Service</i> based on <a href="http://activemq.apache.org/">Apache ActiveMQ</a>
+      
+### [Fabric8 Tools](tools.html)
 
-Rather than configuring each [container](agent.html) (i.e. JVM or process) individually, we use [profiles](profiles.html) to represent a collection of containers; so that you can configure a group of containers in a nice DRY way.
+<a href="http://fabric8.io/guide/tools.html">Fabric8 Tools</a></h3> helps the Java community take full advantage of <a href="http://kubernetes.io/">Kubernetes</a>:
 
-You can combine [profiles](profiles.html) into a container so you can keep your configuration DRY. For example you can decide to colocate services together (putting multiple [profiles](profiles.html) into a container) when they make sense; or separate them into different containers.
+<ul>
+  <li>
+    <a href="http://fabric8.io/guide/mavenPlugin.html">Maven Plugin</a> for working with <a href="http://kubernetes.io/">Kubernetes</a>
+  </li>
+  <li>
+    <a href="http://fabric8.io/guide/testing.html">Integration and System Testing</a> of <a href="http://kubernetes.io/">Kubernetes</a> resources easily inside <a href="http://junit.org/">JUnit</a> with <a href="http://arquillian.org/">Arquillian</a>
+  </li>
+  <li>
+    <a href="http://fabric8.io/guide/javaLibraries.html">Java Libraries</a> and support for <a href="http://fabric8.io/guide/cdi.html">CDI</a> extensions for working with <a href="http://kubernetes.io/">Kubernetes</a>
+  </li>
+</ul>
 
-Or you can use inheritance; so you can configure, say, the ActiveMQ version to use globally; then have a profile which overrides the global configuration of ActiveMQ, for use on a big linux box rather than a small windows box; override the threading or memory usage configuration; while reusing other parts of the configuration.
+### Supported Platforms
 
-#### ZooKeeper for the runtime registry
+Fabric8 works great with [Docker](http://www.docker.com/) and implementations of [Kubernetes](http://kubernetes.io/) such as [Kubernetes itself](http://kubernetes.io/), [OpenShift V3](http://openshift.github.io/), [Project Atomic](http://www.projectatomic.io/) and [Google Container Engine](https://cloud.google.com/container-engine/).
 
-Fabric8 uses [Apache ZooKeeper](http://zookeeper.apache.org/) (from the [Hadoop](http://hadoop.apache.org/) ecosystem) as a way to perform _runtime discovery_ of containers (machines, processes, JVMs) and for coordination (electing leaders, implementing master/slave, sharding or federation of services).
+For non-linux platforms which don't yet support native Docker we have [Jube](jube/index.html) which is an open source pure Java implementation of Kubernetes.
+
+Kubernetes is supported on Google and Microsofts clouds, by OpenShift V3 (on premise and public cloud), by Project Atomic and VMware; so it's increasingly becoming the standard API to PaaS and _Container As A Service_ on the open hybrid clouds. [Jube](jube.html) then helps extend Kubernetes to run Java based middleware on any operating system which supports Java 7.
+

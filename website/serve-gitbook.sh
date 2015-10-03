@@ -1,3 +1,3 @@
 #!/bin/sh
 
-gitbook serve ../docs
+gitbook -v 2.1.0 serve ../docs
