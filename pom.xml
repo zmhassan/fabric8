@@ -26,7 +26,7 @@
 
     <groupId>io.fabric8</groupId>
     <artifactId>fabric8-project</artifactId>
-    <version>2.2.41-SNAPSHOT</version>
+    <version>2.2.90-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Fabric8</name>
@@ -57,6 +57,7 @@
         <developer>
             <id>geeks</id>
             <name>Fabric8 Development Team</name>
+            <email>fabric8@googlegroups.com</email>
             <organization>fabric8</organization>
             <organizationUrl>http://fabric8.io/</organizationUrl>
         </developer>
@@ -70,6 +71,24 @@
     </scm>
 
     <properties>
+
+        <!-- upstream vs redhat versions of dependencies goes here -->
+        <activemq.version>5.12.1</activemq.version>
+        <camel.version>2.16.2</camel.version>
+        <cxf.version>3.1.4</cxf.version>
+        <cxf.plugin.version>3.1.4</cxf.plugin.version>
+
+        <commons.collections.version>3.2.2</commons.collections.version>
+        <hibernate-validator.version>5.2.3.Final</hibernate-validator.version>
+        <jansi.version>1.11</jansi.version>
+        <jolokia.version>1.3.2</jolokia.version>
+        <jgroups.version>3.6.7.Final</jgroups.version>
+        <jsonschema2pojo.version>0.4.18</jsonschema2pojo.version>
+        <snakeyaml.version>1.16</snakeyaml.version>
+        <swagger.jaxrs.version>1.5.5</swagger.jaxrs.version>
+        <vertx.version>2.1.6</vertx.version>
+        <weld.version>2.3.2.Final</weld.version>
+
         <license.dir>${project.parent.basedir}/etc</license.dir>
         <forge-project-id>fabric</forge-project-id>
         <!-- maven-compiler-plugin -->
@@ -82,102 +101,64 @@
         <maven.compiler.argument.target>${maven.compiler.target}</maven.compiler.argument.target>
         <maven.compiler.argument.source>${maven.compiler.source}</maven.compiler.argument.source>
 
-        <activemq.version>5.12.0</activemq.version>
+        <aether.version>1.0.0.v20140518</aether.version>
         <archetype-packaging.version>2.4</archetype-packaging.version>
-        <arquillian-core.version>1.1.9.Final</arquillian-core.version>
-        <arquillian-junit-container.version>1.1.9.Final</arquillian-junit-container.version>
+        <arquillian.version>1.1.11.Final</arquillian.version>
         <asm.version>5.0.4</asm.version>
         <assertj.core.version>1.7.0</assertj.core.version>
         <buildnumber.plugin.version>1.3</buildnumber.plugin.version>
-        <camel.version>2.15.3</camel.version>
-        <commons-codec.version>1.10</commons-codec.version>
-        <commons-lang3.version>3.4</commons-lang3.version>
-        <commons-fileupload.version>1.3.1</commons-fileupload.version>
-        <commons-httpclient.version>3.1</commons-httpclient.version>
-        <commons-io2.version>2.4</commons-io2.version>
-        <commons-lang.version>2.6</commons-lang.version>
-        <compiler.plugin.version>3.3</compiler.plugin.version>
-        <curator.version>2.9.0</curator.version>
-        <cxf.version>3.1.2</cxf.version>
-        <!-- cxf plugin 3.1.2 has Maven NoSuchMethodError -->
-        <cxf.plugin.version>3.0.6</cxf.plugin.version>
-        <deltaspike.version>1.0.3</deltaspike.version>
+
+        <compiler.plugin.version>3.5</compiler.plugin.version>
+        <curator.version>2.9.1</curator.version>
+        <deltaspike.version>1.5.2</deltaspike.version>
         <dnsjava.version>2.1.7</dnsjava.version>
+	<docker.maven.plugin.version>0.13.8</docker.maven.plugin.version>
         <dropwizard-metrics.version>3.1.2</dropwizard-metrics.version>
-        <elasticsearch.version>1.7.2</elasticsearch.version>
         <exec-maven-plugin.version>1.4.0</exec-maven-plugin.version>
-        <fabric8.release.version>2.0.48</fabric8.release.version>
         <felix-scr-annotations.version>1.9.12</felix-scr-annotations.version>
         <felix-scr-plugin.version>1.21.0</felix-scr-plugin.version>
-        <furnace.version>2.22.3.Final</furnace.version>
-        <geronimo-ejb-3-1-spec.version>1.0.2</geronimo-ejb-3-1-spec.version>
-        <geronimo-jms.version>1.1.1</geronimo-jms.version>
-        <geronimo-ws-metadata.version>1.1.3</geronimo-ws-metadata.version>
-        <gson.version>2.3.1</gson.version>
         <mockwebserver.version>20130706</mockwebserver.version>
-        <guava.version>18.0</guava.version>
-        <hawtbuf.version>1.11</hawtbuf.version>
-        <hawtdispatch.version>1.21</hawtdispatch.version>
-        <hibernate-validator.version>5.2.2.Final</hibernate-validator.version>
-        <httpcomponents.version>4.4.1</httpcomponents.version>
-        <httpcomponents.async.version>4.1</httpcomponents.async.version>
-        <jackson2.version>2.6.2</jackson2.version>
-        <jansi.version>1.11</jansi.version>
+        <guava.version>19.0</guava.version>
+        <httpclient.version>4.5.1</httpclient.version>
+        <jackson2.version>2.6.4</jackson2.version>
         <jar.plugin.version>2.6</jar.plugin.version>
-        <jasypt.version>1.9.2</jasypt.version>
         <javax.el-version>2.2.5</javax.el-version>
-        <jboss.forge.version>2.19.2.Final</jboss.forge.version>
-        <!-- TODO is this always the same as drools.version? -->
-        <jersey.version>1.18.1</jersey.version>
         <jetty-plugin-groupId>org.mortbay.jetty</jetty-plugin-groupId>
-        <jetty-plugin.version>8.1.14.v20131031</jetty-plugin.version>
-        <jetty.version>8.1.14.v20131031</jetty.version>
-        <jetty9.version>9.2.10.v20150310</jetty9.version>
-        <jgit.version>4.1.0.201509280440-r</jgit.version>
-        <jolokia.version>1.3.1</jolokia.version>
-        <jgroups.version>3.6.6.Final</jgroups.version>
-        <json.version>20150729</json.version>
+        <jetty-plugin.version>8.1.16.v20140903</jetty-plugin.version>
+        <jetty.version>8.1.17.v20150415</jetty.version>
+<!--
+        We've released a new version of gitective with the latest jgit support
+-->
+        <jgit.version>4.2.0.201601211800-r</jgit.version>
+        <json.version>20151123</json.version>
         <junit.version>4.12</junit.version>
-        <kie.version>6.3.0.Final</kie.version>
-        <kubernetes-client.version>1.3.46</kubernetes-client.version>
-        <kubernetes-model.version>1.0.28</kubernetes-model.version>
+        <kubernetes-client.version>1.3.67</kubernetes-client.version>
         <log4j.version>1.2.17</log4j.version>
-        <logback.version>1.1.3</logback.version>
         <lombok.version>1.16.6</lombok.version>
         <maven.enforcer.version>3.2.3</maven.enforcer.version>
-        <maven.enforcer.plugin.version>1.4</maven.enforcer.plugin.version>
+        <maven.enforcer.plugin.version>1.4.1</maven.enforcer.plugin.version>
         <maven-plugin-plugin.version>3.4</maven-plugin-plugin.version>
-        <maven.failsafe.plugin.version>2.18.1</maven.failsafe.plugin.version>
+        <maven.failsafe.plugin.version>2.19</maven.failsafe.plugin.version>
         <maven.javadoc.plugin.version>2.10.3</maven.javadoc.plugin.version>
-        <mockserver.version>3.10.0</mockserver.version>
-        <mvel.version>2.2.6.Final</mvel.version>
-        <openejb.container.version>4.7.2</openejb.container.version>
+        <mockserver.version>3.10.2</mockserver.version>
+        <mvel.version>2.2.7.Final</mvel.version>
+        <osgi.version>4.3.1</osgi.version>
         <osgi-compendium.version>4.3.1</osgi-compendium.version>
-        <osgi-enterprise.version>5.0.0</osgi-enterprise.version>
-        <osgi.version>5.0.0</osgi.version>
-        <pax.url.version>2.4.3</pax.url.version>
+        <pax.url.version>2.4.5</pax.url.version>
+        <plexus-utils.version>3.0.22</plexus-utils.version>
         <phantomjsdriver.version>1.2.0</phantomjsdriver.version>
-        <qpid-jms.version>0.32</qpid-jms.version>
         <reflections.version>0.9.10</reflections.version>
-        <resteasy.version>3.0.13.Final</resteasy.version>
-        <selenium.version>2.47.2</selenium.version>
+        <selenium.version>2.50.0</selenium.version>
         <selenium.firefox.driver.version>2.28.0</selenium.firefox.driver.version>
         <servlet-api.version>2.5</servlet-api.version>
         <servlet30-api.version>3.0.1</servlet30-api.version>
-        <shrinkwrap-resolver.version>2.2.0</shrinkwrap-resolver.version>
+        <shrinkwrap-resolver.version>2.2.1</shrinkwrap-resolver.version>
         <slf4j.version>1.7.12</slf4j.version>
-        <snakeyaml.version>1.16</snakeyaml.version>
-        <spring.version>4.2.1.RELEASE</spring.version>
-        <spring.boot.version>1.2.6.RELEASE</spring.boot.version>
-        <sundrio.version>0.1.12</sundrio.version>
-        <swagger.jaxrs.version>1.5.3</swagger.jaxrs.version>
-        <tomcat-plugin.version>2.2</tomcat-plugin.version>
+        <spring.version>4.2.3.RELEASE</spring.version>
+        <spring.boot.version>1.2.7.RELEASE</spring.boot.version>
+        <sundrio.version>0.1.23</sundrio.version>
         <validation-api.version>1.1.0.Final</validation-api.version>
-        <vertx.version>2.1.6</vertx.version>
-        <weld.version>2.3.0.Final</weld.version>
-        <wildfly.version>8.2.2.Final</wildfly.version>
-        <zookeeper.version>3.4.6</zookeeper.version>
-        <ning.http-client.version>1.9.31</ning.http-client.version>
+        <zookeeper.version>3.4.7</zookeeper.version>
 
         <!-- OSGi bundles properties -->
         <fuse.osgi.bundle.name>${project.name}</fuse.osgi.bundle.name>
@@ -190,13 +171,10 @@
         <fuse.osgi.import.default.version>[$(version;==;$(@)),$(version;+;$(@)))</fuse.osgi.import.default.version>
         <fuse.osgi.import.defaults>
             org.springframework.osgi.*;version="[1.2,2)",
-            org.springframework.*;version="[3.1,4)",
+            org.springframework.*;version="[3.2,5)",
             org.apache.commons.logging.*;version="[1.1,2)",
+            org.apache.activemq.*;version="[5.11,6)",
             org.apache.camel.*;version="[2.15,3)",
-            org.apache.felix.gogo.commands.*;version="[0.10,1)",
-            org.apache.felix.service.command.*;version="[0.10,1)",
-            org.osgi.service.component.*;version="[1.1,2.0)",
-            scala*;version="[2.11,2.12)"
         </fuse.osgi.import.defaults>
         <fuse.osgi.import.before.defaults />
         <fuse.osgi.import.additional />
@@ -246,18 +224,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <!-- Commons -->
-            <dependency>
-                <groupId>commons-codec</groupId>
-                <artifactId>commons-codec</artifactId>
-                <version>${commons-codec.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>commons-io</groupId>
-                <artifactId>commons-io</artifactId>
-                <version>${commons-io2.version}</version>
-            </dependency>
-
             <dependency>
                 <groupId>javax.servlet</groupId>
                 <artifactId>servlet-api</artifactId>
@@ -293,11 +259,6 @@
                 <version>${kubernetes-client.version}</version>
                 <scope>test</scope>
             </dependency>
-            <dependency>
-                <groupId>io.fabric8</groupId>
-                <artifactId>kubernetes-client-with-deps</artifactId>
-                <version>${kubernetes-client.version}</version>
-            </dependency>
 
             <dependency>
                 <groupId>io.fabric8</groupId>
@@ -310,21 +271,11 @@
                 <version>${kubernetes-client.version}</version>
                 <scope>test</scope>
             </dependency>
-            <dependency>
-                <groupId>io.fabric8</groupId>
-                <artifactId>openshift-client-with-deps</artifactId>
-                <version>${kubernetes-client.version}</version>
-            </dependency>
 
             <dependency>
                 <groupId>io.fabric8</groupId>
                 <artifactId>fabric8-arquillian</artifactId>
                 <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.jboss.arquillian.junit</groupId>
-                <artifactId>arquillian-junit-container</artifactId>
-                <version>${arquillian-junit-container.version}</version>
             </dependency>
 
             <dependency>
@@ -344,6 +295,11 @@
             </dependency>
             <dependency>
               <groupId>io.fabric8</groupId>
+              <artifactId>fabric8-camel</artifactId>
+              <version>${project.version}</version>
+            </dependency>
+            <dependency>
+              <groupId>io.fabric8</groupId>
               <artifactId>fabric8-cdi</artifactId>
               <version>${project.version}</version>
             </dependency>
@@ -355,11 +311,6 @@
             <dependency>
               <groupId>io.fabric8</groupId>
               <artifactId>fabric8-devops-connector</artifactId>
-              <version>${project.version}</version>
-            </dependency>
-            <dependency>
-              <groupId>io.fabric8.forge</groupId>
-              <artifactId>fabric8-forge-core</artifactId>
               <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -398,37 +349,6 @@
               <version>${selenium.firefox.driver.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>io.fabric8</groupId>
-                <artifactId>docker-api</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>io.fabric8.etcd</groupId>
-                <artifactId>fabric8-etcd-api</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.fabric8.etcd</groupId>
-                <artifactId>fabric8-etcd-core</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.fabric8.etcd.reader</groupId>
-                <artifactId>fabric8-etcd-reader-gson</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.fabric8.etcd.reader</groupId>
-                <artifactId>fabric8-etcd-reader-jackson</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.fabric8</groupId>
-                <artifactId>fabric8-groups</artifactId>
-                <version>${project.version}</version>
-            </dependency>
             <dependency>
               <groupId>io.fabric8</groupId>
               <artifactId>gateway-api</artifactId>
@@ -532,18 +452,8 @@
             </dependency>
             <dependency>
                 <groupId>io.fabric8</groupId>
-                <artifactId>zookeeper-client</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.fabric8</groupId>
                 <artifactId>fabric8-vertx</artifactId>
                 <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.fabric8</groupId>
-                <artifactId>kubernetes-model</artifactId>
-                <version>${kubernetes-model.version}</version>
             </dependency>
             <dependency>
                 <groupId>io.fabric8</groupId>
@@ -560,14 +470,6 @@
                 <artifactId>gerrit-api</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            <!-- Internal testing modules -->
-            <dependency>
-                <groupId>io.fabric8.etcd</groupId>
-                <artifactId>fabric8-etcd-core</artifactId>
-                <version>${project.version}</version>
-                <type>test-jar</type>
-            </dependency>
-
             <!-- OSGi -->
             <dependency>
                 <groupId>org.osgi</groupId>
@@ -578,11 +480,6 @@
                 <groupId>org.osgi</groupId>
                 <artifactId>org.osgi.compendium</artifactId>
                 <version>${osgi-compendium.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.osgi</groupId>
-                <artifactId>org.osgi.enterprise</artifactId>
-                <version>${osgi-enterprise.version}</version>
             </dependency>
 
             <!-- Camel -->
@@ -604,24 +501,6 @@
                 <version>${camel.version}</version>
                 <type>xml</type>
                 <classifier>features</classifier>
-            </dependency>
-
-            <!-- Kie && jBPM -->
-            <dependency>
-              <groupId>org.kie</groupId>
-              <artifactId>kie-api</artifactId>
-              <version>${kie.version}</version>
-            </dependency>
-            <dependency>
-              <groupId>org.kie.remote</groupId>
-              <artifactId>kie-remote-client</artifactId>
-              <version>${kie.version}</version>
-            </dependency>
-
-            <dependency>
-              <groupId>org.jbpm</groupId>
-              <artifactId>jbpm-test</artifactId>
-              <version>${kie.version}</version>
             </dependency>
 
           <!-- Weld -->
@@ -696,13 +575,6 @@
                 <version>${vertx.version}</version>
             </dependency>
 
-            <!-- LogBack -->
-            <dependency>
-                <groupId>ch.qos.logback</groupId>
-                <artifactId>logback-classic</artifactId>
-                <version>${logback.version}</version>
-            </dependency>
-
             <!-- Log4j -->
             <dependency>
                 <groupId>log4j</groupId>
@@ -732,6 +604,11 @@
                 <artifactId>slf4j-jdk14</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>jul-to-slf4j</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
 
             <!-- Commons Logging -->
             <dependency>
@@ -747,6 +624,11 @@
 
             <!-- Others -->
             <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>${httpclient.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-framework</artifactId>
                 <version>${curator.version}</version>
@@ -754,6 +636,11 @@
             <dependency>
                 <groupId>org.apache.curator</groupId>
                 <artifactId>curator-recipes</artifactId>
+                <version>${curator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.curator</groupId>
+                <artifactId>curator-test</artifactId>
                 <version>${curator.version}</version>
             </dependency>
             <dependency>
@@ -765,11 +652,6 @@
                 <groupId>org.apache.zookeeper</groupId>
                 <artifactId>zookeeper</artifactId>
                 <version>${zookeeper.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.jasypt</groupId>
-                <artifactId>jasypt</artifactId>
-                <version>${jasypt.version}</version>
             </dependency>
 
             <!-- OPS4J -->
@@ -788,32 +670,16 @@
                 <scope>import</scope>
             </dependency>
 
-            <!-- Hawt stuff -->
-            <dependency>
-                <groupId>org.fusesource.hawtdispatch</groupId>
-                <artifactId>hawtdispatch</artifactId>
-                <version>${hawtdispatch.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.fusesource.hawtdispatch</groupId>
-                <artifactId>hawtdispatch-transport</artifactId>
-                <version>${hawtdispatch.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.fusesource.hawtbuf</groupId>
-                <artifactId>hawtbuf</artifactId>
-                <version>${hawtbuf.version}</version>
-            </dependency>
             <!-- EasyMock -->
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymock</artifactId>
-                <version>2.4</version>
+                <version>3.2</version>
             </dependency>
             <dependency>
                 <groupId>org.easymock</groupId>
                 <artifactId>easymockclassextension</artifactId>
-                <version>2.4</version>
+                <version>3.2</version>
             </dependency>
             <!-- Mockito -->
             <dependency>
@@ -838,47 +704,6 @@
                 <artifactId>mockserver-netty</artifactId>
                 <version>${mockserver.version}</version>
             </dependency>
-
-            <dependency>
-              <groupId>org.apache.geronimo.specs</groupId>
-              <artifactId>geronimo-ejb_3.1_spec</artifactId>
-              <version>${geronimo-ejb-3-1-spec.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.geronimo.specs</groupId>
-                <artifactId>geronimo-ws-metadata_2.0_spec</artifactId>
-                <version>${geronimo-ws-metadata.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>commons-lang</groupId>
-                <artifactId>commons-lang</artifactId>
-                <version>${commons-lang.version}</version>
-            </dependency>
-
-            <!-- Jersey -->
-            <dependency>
-                <groupId>com.sun.jersey</groupId>
-                <artifactId>jersey-servlet</artifactId>
-                <version>${jersey.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>commons-configuration</groupId>
-                <artifactId>commons-configuration</artifactId>
-                <version>1.8</version>
-            </dependency>
-            <dependency>
-                <groupId>org.mortbay.jetty</groupId>
-                <artifactId>jetty</artifactId>
-                <version>6.1.26</version>
-            </dependency>
-            <dependency>
-                <groupId>org.mortbay.jetty</groupId>
-                <artifactId>jetty-util</artifactId>
-                <version>6.1.26</version>
-            </dependency>
-
             <dependency>
                 <groupId>org.apache.activemq</groupId>
                 <artifactId>activemq-osgi</artifactId>
@@ -935,6 +760,11 @@
                     </exclusion>
                 </exclusions>
             </dependency>
+            <dependency>
+                <groupId>org.apache.activemq</groupId>
+                <artifactId>activemq-stomp</artifactId>
+                <version>${activemq.version}</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.mvel</groupId>
@@ -973,23 +803,6 @@
               <version>${jackson2.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>org.apache.geronimo.specs</groupId>
-                <artifactId>geronimo-atinject_1.0_spec</artifactId>
-                <version>${geronimo-atinject.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.apache.commons</groupId>
-                <artifactId>commons-lang3</artifactId>
-                <version>${commons-lang3.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.google.code.gson</groupId>
-                <artifactId>gson</artifactId>
-                <version>${gson.version}</version>
-            </dependency>
 
             <dependency>
                 <groupId>org.yaml</groupId>
@@ -1339,13 +1152,10 @@
                  <version>${swagger.jaxrs.version}</version>
              </dependency>
 
-            <dependency>
-                <groupId>org.jboss.arquillian</groupId>
-                <artifactId>arquillian-bom</artifactId>
-                <version>${arquillian-core.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
+            <!-- Shrinkwrap NEEDS to be defined before arquillian
+                It seems that maven uses the first bom wins rule
+                when 2 boms define the same version of a single artifact.
+             -->
             <dependency>
                 <groupId>org.jboss.shrinkwrap.resolver</groupId>
                 <artifactId>shrinkwrap-resolver-bom</artifactId>
@@ -1355,14 +1165,35 @@
             </dependency>
 
             <dependency>
-                <groupId>org.apache.httpcomponents</groupId>
-                <artifactId>httpasyncclient</artifactId>
-                <version>${httpcomponents.async.version}</version>
+                <groupId>org.jboss.arquillian</groupId>
+                <artifactId>arquillian-bom</artifactId>
+                <version>${arquillian.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
+
             <dependency>
-                <groupId>commons-httpclient</groupId>
-                <artifactId>commons-httpclient</artifactId>
-                <version>${commons-httpclient.version}</version>
+                <groupId>org.eclipse.aether</groupId>
+                <artifactId>aether-spi</artifactId>
+                <version>${aether.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.eclipse.aether</groupId>
+                <artifactId>aether-impl</artifactId>
+                <version>${aether.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.eclipse.aether</groupId>
+                <artifactId>aether-util</artifactId>
+                <version>${aether.version}</version>
+            </dependency>
+            <!-- allows quickstarts to override the ancient plexu-utils that somemtimes comes in from shrinkwrap boms -->
+            <dependency>
+                <groupId>org.codehaus.plexus</groupId>
+                <artifactId>plexus-utils</artifactId>
+                <version>${plexus-utils.version}</version>
             </dependency>
 
             <dependency>
@@ -1376,26 +1207,11 @@
               <version>${assertj.core.version}</version>
             </dependency>
 
-            <dependency>
-                <groupId>org.wildfly.bom</groupId>
-                <artifactId>jboss-javaee-7.0-with-tools</artifactId>
-                <version>${wildfly.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
             <!-- JGroups -->
-
             <dependency>
                 <groupId>org.jgroups</groupId>
                 <artifactId>jgroups</artifactId>
                 <version>${jgroups.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.elasticsearch</groupId>
-                <artifactId>elasticsearch</artifactId>
-                <version>${elasticsearch.version}</version>
             </dependency>
 
             <dependency>
@@ -1435,16 +1251,15 @@
               <artifactId>metrics-core</artifactId>
               <version>${dropwizard-metrics.version}</version>
             </dependency>
-
             <dependency>
-              <groupId>org.hibernate</groupId>
-              <artifactId>hibernate-validator</artifactId>
-              <version>${hibernate-validator.version}</version>
+              <groupId>io.dropwizard.metrics</groupId>
+              <artifactId>metrics-json</artifactId>
+              <version>${dropwizard-metrics.version}</version>
             </dependency>
 
             <dependency>
               <groupId>org.hibernate</groupId>
-              <artifactId>hibernate-validator-cdi</artifactId>
+              <artifactId>hibernate-validator</artifactId>
               <version>${hibernate-validator.version}</version>
             </dependency>
 
@@ -1458,13 +1273,6 @@
               <artifactId>javax.el</artifactId>
               <version>${javax.el-version}</version>
             </dependency>
-
-            <dependency>
-              <groupId>org.eclipse.jetty.websocket</groupId>
-              <artifactId>websocket-client</artifactId>
-              <version>${jetty9.version}</version>
-            </dependency>
-
             <dependency>
                 <groupId>com.sun</groupId>
                 <artifactId>tools</artifactId>
@@ -1478,10 +1286,10 @@
     <modules>
         <module>parent</module>
         <module>fabric8-apt</module>
-        <module>fabric8-maven-plugin</module>
         <module>components</module>
+        <module>fabric8-maven-plugin</module>
+        <module>hawt-app-maven-plugin</module>
         <module>tooling</module>
-        <module>forge</module>
     </modules>
 
     <build>
@@ -1492,14 +1300,19 @@
             <artifactId>maven-failsafe-plugin</artifactId>
             <version>${maven.failsafe.plugin.version}</version>
           </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>${maven.javadoc.plugin.version}</version>
-                <configuration>
-                    <additionalparam>${javadoc.opts}</additionalparam>
-                </configuration>
-            </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>${maven.javadoc.plugin.version}</version>
+            <configuration>
+              <additionalparam>${javadoc.opts}</additionalparam>
+            </configuration>
+          </plugin>
+	      <plugin>
+		    <groupId>org.jolokia</groupId>
+		    <artifactId>docker-maven-plugin</artifactId>
+		    <version>${docker.maven.plugin.version}</version>
+	      </plugin>
         </plugins>
       </pluginManagement>
       <plugins>
@@ -1518,26 +1331,65 @@
                                   <include>io.fabric8:openshift-*</include>
                               </includes>
                           </dependencies>
+                          <plugins>
+                              <includes>
+                                  <include>io.fabric8:*</include>
+                                  <include>org.jolokia:docker-maven-plugin</include>
+                              </includes>
+                          </plugins>
                           <properties>
                               <skipStagingRepositoryClose>true</skipStagingRepositoryClose>
                           </properties>
+                          <inheritPluginManagement>true</inheritPluginManagement>
                       </bom>
                       <bom>
-                          <artifactId>fabric8-project-bom-with-deps</artifactId>
-                          <name>Fabric8 :: Project :: Bom with Dependencies</name>
+                          <artifactId>fabric8-project-bom-with-platform-deps</artifactId>
+                          <name>Fabric8 :: Project :: Bom with Platform Dependencies</name>
                           <dependencies>
                               <includes>
-                                  <include>com.ning:*</include>
-                                  <include>io.netty:*</include>
-                                  <include>com.fasterxml.jackson*:*</include>
-                                  <include>net.oauth*:*</include>
-                                  <include>io.fabric8:kubernetes-*</include>
-                                  <include>io.fabric8:openshift-*</include>
+                                  <include>javax*:*</include>
+                                  <!-- Core platform -->
+                                  <include>org.jboss.weld*:*</include>
+                                  <include>org.jboss.arquillian*:*</include>
+                                  <include>org.jboss.shrinkwrap*:*</include>
+                                  <include>org.apache.deltaspike*:*</include>
+                                  <!-- minor things that are easy to get wrong -->
+                                  <include>org.ops4j.pax.url:pax-url-aether</include>
+                                  <include>org.codehaus.plexus:plexus-utils</include>
+                                  <include>xml-apis:xml-apis</include>
                               </includes>
                           </dependencies>
+                          <plugins>
+                              <includes>
+                                  <include>io.fabric8:*</include>
+                                  <include>org.jolokia:docker-maven-plugin</include>
+                              </includes>
+                          </plugins>
                           <properties>
                               <skipStagingRepositoryClose>true</skipStagingRepositoryClose>
                           </properties>
+                          <inheritDependencyManagement>true</inheritDependencyManagement>
+                          <inheritPluginManagement>true</inheritPluginManagement>
+                      </bom>
+                      <bom>
+                          <artifactId>fabric8-project-bom-full</artifactId>
+                          <name>Fabric8 :: Project :: Bom with Eveything</name>
+                          <dependencies>
+                              <includes>
+                                  <include>*:*</include>
+                              </includes>
+                          </dependencies>
+                          <plugins>
+                              <includes>
+                                  <include>io.fabric8:*</include>
+                                  <include>org.jolokia:docker-maven-plugin</include>
+                              </includes>
+                          </plugins>
+                          <properties>
+                              <skipStagingRepositoryClose>true</skipStagingRepositoryClose>
+                          </properties>
+                          <inheritDependencyManagement>true</inheritDependencyManagement>
+                          <inheritPluginManagement>true</inheritPluginManagement>
                       </bom>
                   </boms>
               </configuration>
@@ -1685,11 +1537,20 @@
         <profile>
             <id>release</id>
             <properties>
-              <!-- when releasing lets use the release version -->
-              <fabric8.release.version>${project.version}</fabric8.release.version>
             </properties>
             <build>
                 <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>io/fabric8/arquillian/DependencyResolverTest.java</exclude>
+                                <exclude>io/fabric8/cdi/weld/internal/ExtensionInternalTest.java</exclude>
+                                <exclude>io/fabric8/cdi/weld/external/ExtensionExternalTest.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
@@ -1758,13 +1619,13 @@
         <profile>
             <id>camel-snapshot</id>
             <properties>
-                <camel.version>2.16-SNAPSHOT</camel.version>
+                <camel.version>2.17-SNAPSHOT</camel.version>
             </properties>
         </profile>
         <profile>
             <id>kubernetes-model-snapshot</id>
             <properties>
-                <kubernetes-model.version>1.0.26-SNAPSHOT</kubernetes-model.version>
+                <kubernetes-model.version>1.0.30-SNAPSHOT</kubernetes-model.version>
             </properties>
         </profile>
         <profile>

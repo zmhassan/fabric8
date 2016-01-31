@@ -20,16 +20,17 @@
   <parent>
     <groupId>io.fabric8</groupId>
     <artifactId>components</artifactId>
-    <version>2.2.41-SNAPSHOT</version>
+    <version>2.2.90-SNAPSHOT</version>
   </parent>
 
   <modelVersion>4.0.0</modelVersion>
   <artifactId>fabric8-cxf-plugins</artifactId>
-  <name>Fabric8 :: Swagger Maven Plugins</name>
+  <name>Fabric8 :: CXF :: Swagger Maven Plugins</name>
   <packaging>maven-plugin</packaging>
 
   <dependencies>
 
+    <!-- TODO: we should favor reusing a plugin for Apache CXF if there is one -->
 
     <!-- maven plugin dependencies -->
     <dependency>

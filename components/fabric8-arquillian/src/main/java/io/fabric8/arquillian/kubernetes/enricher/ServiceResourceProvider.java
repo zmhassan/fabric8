@@ -15,7 +15,6 @@
  */
 package io.fabric8.arquillian.kubernetes.enricher;
 
-import io.fabric8.annotations.ServiceName;
 import io.fabric8.arquillian.kubernetes.Session;
 import io.fabric8.kubernetes.api.model.Service;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -26,7 +25,7 @@ import org.jboss.arquillian.test.spi.enricher.resource.ResourceProvider;
 
 import java.lang.annotation.Annotation;
 
-import static io.fabric8.kubernetes.api.KubernetesHelper.getName;
+import static io.fabric8.arquillian.kubernetes.enricher.EnricherUtils.getServiceName;
 
 /**
  * A {@link org.jboss.arquillian.test.spi.enricher.resource.ResourceProvider} for {@link io.fabric8.kubernetes.api.model.ServiceList}.
@@ -49,21 +48,7 @@ public class ServiceResourceProvider implements ResourceProvider {
     public Object lookup(ArquillianResource resource, Annotation... qualifiers) {
         KubernetesClient client = this.clientInstance.get();
         Session session = sessionInstance.get();
-        for (Service service : client.services().inNamespace(session.getNamespace()).list().getItems()) {
-            if ( qualifies(service, qualifiers) ) {
-                return service;
-            }
-        }
-        return null;
-    }
-
-    private boolean qualifies(Service s, Annotation... qualifiers) {
-        for (Annotation annotation : qualifiers) {
-            if (annotation instanceof ServiceName) {
-                String id = ((ServiceName) annotation).value();
-                return id.equals(getName(s));
-            }
-        }
-        return false;
+        String name = getServiceName(qualifiers);
+        return client.services().inNamespace(session.getNamespace()).withName(name).get();
     }
 }

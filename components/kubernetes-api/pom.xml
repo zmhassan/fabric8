@@ -22,12 +22,12 @@
   <parent>
     <groupId>io.fabric8</groupId>
     <artifactId>components</artifactId>
-    <version>2.2.41-SNAPSHOT</version>
+    <version>2.2.90-SNAPSHOT</version>
   </parent>
 
   <artifactId>kubernetes-api</artifactId>
   <packaging>bundle</packaging>
-  <name>Fabric8 :: Kubernetes API</name>
+  <name>Fabric8 :: Kubernetes :: API</name>
 
   <dependencies>
 
@@ -76,14 +76,6 @@
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-log4j12</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <!-- lets force the codegen to run first -->
-    <dependency>
-      <groupId>io.fabric8</groupId>
-      <artifactId>kubernetes-codegen</artifactId>
-      <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

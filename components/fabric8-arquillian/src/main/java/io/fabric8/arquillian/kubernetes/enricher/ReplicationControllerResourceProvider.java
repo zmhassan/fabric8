@@ -15,7 +15,6 @@
  */
 package io.fabric8.arquillian.kubernetes.enricher;
 
-import io.fabric8.annotations.ReplicationControllerName;
 import io.fabric8.arquillian.kubernetes.Session;
 import io.fabric8.kubernetes.api.model.ReplicationController;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -26,7 +25,7 @@ import org.jboss.arquillian.test.spi.enricher.resource.ResourceProvider;
 
 import java.lang.annotation.Annotation;
 
-import static io.fabric8.kubernetes.api.KubernetesHelper.getName;
+import static io.fabric8.arquillian.kubernetes.enricher.EnricherUtils.getReplicationControllerName;
 
 /**
  * A {@link org.jboss.arquillian.test.spi.enricher.resource.ResourceProvider} for {@link io.fabric8.kubernetes.api.model.ReplicationControllerList}.
@@ -49,22 +48,7 @@ public class ReplicationControllerResourceProvider implements ResourceProvider {
     public Object lookup(ArquillianResource resource, Annotation... qualifiers) {
         KubernetesClient client = this.clientInstance.get();
         Session session = sessionInstance.get();
-        for (ReplicationController replicationController : client.replicationControllers().inNamespace(session.getNamespace()).list().getItems()) {
-            if (qualifies(replicationController, qualifiers)) {
-                return replicationController;
-            }
-        }
-        return null;
-    }
-
-    private boolean qualifies(ReplicationController r, Annotation... qualifiers) {
-        for (Annotation annotation : qualifiers) {
-            if (annotation instanceof ReplicationControllerName) {
-                String id = ((ReplicationControllerName) annotation).value();
-                String rid = getName(r);
-                return id.equals(rid);
-            }
-        }
-        return false;
+        String name = getReplicationControllerName(qualifiers);
+        return client.replicationControllers().inNamespace(session.getNamespace()).withName(name).get();
     }
 }

@@ -24,6 +24,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -132,7 +133,7 @@ public final class Files {
      */
     public static String getFileExtension(String path) {
         String fileName = getFileName(path);
-        if (fileName  != null) {
+        if (fileName != null) {
             int idx = fileName.lastIndexOf('.');
             if (idx > 1) {
                 String answer = fileName.substring(idx + 1);
@@ -146,7 +147,7 @@ public final class Files {
 
     public static String getFileExtension(File file) {
         String fileName = file.getName();
-        if (fileName  != null) {
+        if (fileName != null) {
             int idx = fileName.lastIndexOf('.');
             if (idx > 1) {
                 String answer = fileName.substring(idx + 1);
@@ -344,9 +345,19 @@ public final class Files {
         if (!target.exists() && !target.getParentFile().exists() && !target.getParentFile().mkdirs()) {
             throw new IOException("Can't create target directory:" + target.getParentFile().getAbsolutePath());
         }
-        FileInputStream is = new FileInputStream(source);
-        FileOutputStream os = new FileOutputStream(target);
-        copy(is, os);
+        if (source.isDirectory()) {
+            target.mkdirs();
+            File[] files = source.listFiles();
+            if (files != null) {
+                for (File child : files) {
+                    copy(child, new File(target, child.getName()));
+                }
+            }
+        } else {
+            FileInputStream is = new FileInputStream(source);
+            FileOutputStream os = new FileOutputStream(target);
+            copy(is, os);
+        }
     }
 
     /**
@@ -410,6 +421,20 @@ public final class Files {
             throw new IllegalArgumentException(file + " is not a directory!");
         }
     }
+
+    public static Set<File> recursiveList(File root, FilenameFilter filter) {
+        Set<File> result = new HashSet<>();
+        if (root != null) {
+            result.add(root);
+            if (root.isDirectory()) {
+                for (File child : root.listFiles(filter)) {
+                    result.addAll(recursiveList(child, filter));
+                }
+            }
+        }
+        return result;
+    }
+
 
     /**
      * Recursively deletes the given file whether its a file or directory returning the number
@@ -531,6 +556,18 @@ public final class Files {
             }
         }
 
+    }
+
+    public static String getExtension(String filename) {
+        if (filename == null) {
+            return null;
+        }
+        int index = filename.lastIndexOf(".");
+        if (index == -1) {
+            return "";
+        } else {
+            return filename.substring(index + 1);
+        }
     }
 
     /**

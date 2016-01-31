@@ -1,19 +1,18 @@
-/*
- * Copyright 2005-2014 Red Hat, Inc.
+/**
+ *  Copyright 2005-2015 Red Hat, Inc.
  *
- * Red Hat licenses this file to you under the Apache License, version
- * 2.0 (the "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ *  Red Hat licenses this file to you under the Apache License, version
+ *  2.0 (the "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
- * implied.  See the License for the specific language governing
- * permissions and limitations under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ *  implied.  See the License for the specific language governing
+ *  permissions and limitations under the License.
  */
-
 package io.fabric8.arquillian.server.mock;
 
 import io.fabric8.arquillian.ResourceInjection;
@@ -42,47 +41,48 @@ public class ServerMockTestSuite {
 
     @BeforeClass
     public static void setUpClass() throws IOException {
-        MOCK.expectAndReturnAsJson("/api/v1/namespaces/arquillian", 200, new NamespaceBuilder()
+        MOCK.expect().withPath("/api/v1/namespaces/arquillian").andReturn(200, new NamespaceBuilder()
                 .withNewMetadata()
                 .withName("arquillian")
-                .and().build());
+                .and().build()).always();
 
-        MOCK.expectAndReturnAsJson("/api/v1/namespaces/arquillian/replicationcontrollers", 200, new ReplicationControllerListBuilder()
+        MOCK.expect().withPath("/api/v1/namespaces/arquillian/replicationcontrollers").andReturn(200, new ReplicationControllerListBuilder()
                 .addNewItem()
                 .withNewMetadata()
                 .withName("repl1")
                 .endMetadata()
                 .endItem()
-                .build());
+                .build()).always();
 
 
-        MOCK.expectAndReturnAsJson("/api/v1/namespaces/arquillian/pods", 200, new PodListBuilder().addNewItem()
+        MOCK.expect().withPath("/api/v1/namespaces/arquillian/pods").andReturn(200, new PodListBuilder().addNewItem()
                 .withNewMetadata()
                 .withName("pod1")
                 .endMetadata()
                 .endItem()
-                .build());
+                .build()).always();
 
-        MOCK.expectAndReturnAsJson("/api/v1/namespaces/arquillian/services", 200, new ServiceListBuilder()
+        MOCK.expect().withPath("/api/v1/namespaces/arquillian/services").andReturn(200, new ServiceListBuilder()
                 .addNewItem()
                 .withNewMetadata()
                 .withName("service1")
                 .endMetadata()
                 .endItem()
-                .build());
+                .build()).always();
 
 
         MOCK.init();
 
-        String masterUrl = "http://localhost:" + MOCK.getServer().getPort();
+        String masterUrl = MOCK.getServer().getUrl("/").toString();
         System.setProperty(Config.KUBERNETES_MASTER_SYSTEM_PROPERTY, masterUrl);
         System.setProperty(Config.KUBERNETES_NAMESPACE_SYSTEM_PROPERTY, "arquillian");
         System.setProperty(Constants.NAMESPACE_TO_USE, "arquillian");
         System.setProperty(Constants.NAMESPACE_LAZY_CREATE_ENABLED, "arquillian");
+        System.setProperty(Config.KUBERNETES_TRUST_CERT_SYSTEM_PROPERTY, "true");
     }
 
     @AfterClass
     public static void tearDownClass() throws IOException {
-        MOCK.getServer().shutdown();
+        //MOCK.getServer().shutdown();
     }
 }

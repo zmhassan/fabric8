@@ -88,6 +88,22 @@ See [this example](https://github.com/fabric8io/quickstarts/blob/master/app-grou
 
 You can use maven properties to customize the generation of the JSON:
 
+You define the maven properties in the `pom.xml` file using the `<properties>` tag such as:
+
+```
+    <properties>
+      <fabric8.label.container>java</fabric8.label.container>
+      <fabric8.label.group>myapp</fabric8.label.group>
+      <fabric8.iconRef>camel</fabric8.iconRef>
+    </properties>
+```
+
+If you wish to override or add a property from the command line, you can do this by using Java JVM system properties. A property from the command line will override any existing option configured in the `pom.xml` file. For example to add a 3rd label and change the icon, you can do:
+
+    mvn fabric8:json -Dfabric8.label.foo=bar -Dfabric8.iconRef=java
+  
+There are many options as listed in the following table:
+  
 <table class="table table-striped">
 <tr>
 <th>Parameter</th>
@@ -116,6 +132,13 @@ You can use maven properties to customize the generation of the JSON:
 <tr>
 <td>fabric8.extra.json</td>
 <td>Allows an extra JSON file to be merged into the generated kubernetes json file. Defaults to using the file <code>target/classes/kubernetes-extra.json</code>.</td>
+</tr>
+<tr>
+<td>fabric8.extended.environment.metadata</td>
+<td>Whether to try to fetch extended environment metadata during the json, or apply goals. The following ENV variables is supported: <tt>BUILD_URI</tt>, <tt>GIT_URL</tt>, <tt>GIT_COMMIT</tt>, <tt>GIT_BRANCH</tt>
+    If any of these ENV variable is empty then if this option is enabled, then the value is attempted to be fetched from an online connection to the Kubernetes master. If the connection fails then the goal will report this as a failure gently and continue.
+    This option can be turned off, to avoid any live connection to the Kubernetes master.
+</td>
 </tr>
 <tr>
 <td>fabric8.generateJson</td>
@@ -179,6 +202,18 @@ You can use maven properties to customize the generation of the JSON:
 <td>Creates a TCP socket action liveness probe on specified port.</td>
 </tr>
 <tr>
+<td>fabric8.metrics.scrape</td>
+<td>Enable/disable the export of metrics to Prometheus. See more details at <a href="http://fabric8.io/guide/metrics.html>metrics</a></td>
+</tr>
+<tr>
+<td>fabric8.metrics.port</td>
+<td>the request port to find metrics to export to Prometheus.</td>
+</tr>
+<tr>
+<td>fabric8.metrics.scheme</td>
+<td>the request scheme to find metrics to export to Prometheus.</td>
+</tr>
+<tr>
 <td>fabric8.namespaceEnvVar</td>
 <td>The name of the env var to add that will contain the namespace at container runtime. Defaults to <code>KUBERNETES_NAMESPACE</code>.</td>
 </tr>
@@ -238,6 +273,10 @@ You can use maven properties to customize the generation of the JSON:
 <td>fabric8.service.name</td>
 <td>The name of the Service to generate. Defaults to <code>${project.artifactId}</code> (the artifact Id of the project)</td>
 </tr>
+<td>fabric8.service.headless</td>
+<td>Whether or not we should generate headless services (services with no ports exposed, no cluster IPs, and are not managed my the Kube Proxy)</td>
+</tr>
+<tr>
 <tr>
 <td>fabric8.service.port</td>
 <td>The port of the Service to generate (if a kubernetes service is required).</td>
@@ -264,7 +303,44 @@ You can use maven properties to customize the generation of the JSON:
 <td>The container port to target to generate (if a kubernetes service is required with multiple ports).</td>
 </tr>
 <tr>
+<td>fabric8.service.nodePort.&lt;portName&gt;</td>
+<td>The node port of this service to generate (if a kubernetes service is required with multiple ports).</td>
+</tr>
+<tr>
 <td>fabric8.service.protocol.&lt;portName&gt;</td>
+<td>The protocol of this service port to generate (if a kubernetes service is required with multiple ports).</td>
+</tr>
+<tr>
+<td>fabric8.service.&lt;name&gt;.port</td>
+<td>The port of the Service to generate for service &lt;name&gt;.</td>
+</tr>
+<tr>
+<td>fabric8.service.&lt;name&gt;.type</td>
+<td>The <a href="http://releases.k8s.io/HEAD/docs/user-guide/services.md#external-services">type of the service</a>. Set to <code>"LoadBalancer"</code> if you wish an
+  <a href="https://github.com/GoogleCloudPlatform/kubernetes/blob/master/docs/user-guide/services.md#type-loadbalancer"></a>external load balancer</a> to be created.</td>
+</tr>
+<tr>
+<td>fabric8.service.&lt;name&gt;.containerPort</td>
+<td>The container port of the Service to generate (if a kubernetes service is required).</td>
+</tr>
+<tr>
+<td>fabric8.service.protocol</td>
+<td>The protocol of the service. (If not specified then kubernetes will default it to TCP).</td>
+</tr>
+<tr>
+<td>fabric8.service.&lt;name&gt;.port.&lt;portName&gt;</td>
+<td>The service port to generate (if a kubernetes service is required with multiple ports).</td>
+</tr>
+<tr>
+<td>fabric8.service.&lt;name&gt;.containerPort.&lt;portName&gt;</td>
+<td>The container port to target to generate (if a kubernetes service is required with multiple ports).</td>
+</tr>
+<tr>
+<td>fabric8.service.&lt;name&gt;.nodePort.&lt;portName&gt;</td>
+<td>The node port of this service to generate (if a kubernetes service is required with multiple ports).</td>
+</tr>
+<tr>
+<td>fabric8.service.&lt;name&gt;.protocol.&lt;portName&gt;</td>
 <td>The protocol of this service port to generate (if a kubernetes service is required with multiple ports).</td>
 </tr>
 <tr>

@@ -20,6 +20,7 @@ import io.fabric8.annotations.Configuration;
 import io.fabric8.annotations.Endpoint;
 import io.fabric8.annotations.External;
 import io.fabric8.annotations.Factory;
+import io.fabric8.annotations.Path;
 import io.fabric8.annotations.PortName;
 import io.fabric8.annotations.Protocol;
 import io.fabric8.annotations.ServiceName;
@@ -29,7 +30,9 @@ import io.fabric8.cdi.bean.ServiceBean;
 import io.fabric8.cdi.bean.ServiceUrlBean;
 import io.fabric8.cdi.bean.ServiceUrlCollectionBean;
 import io.fabric8.cdi.producers.FactoryMethodProducer;
+import io.fabric8.cdi.qualifiers.EndpointQualifier;
 import io.fabric8.cdi.qualifiers.ExternalQualifier;
+import io.fabric8.cdi.qualifiers.PathQualifier;
 import io.fabric8.cdi.qualifiers.PortQualifier;
 import io.fabric8.cdi.qualifiers.ProtocolQualifier;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -56,12 +59,20 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import static io.fabric8.cdi.Utils.getFactoryMethodPort;
+import static io.fabric8.cdi.Utils.getFactoryMethodProtocol;
+import static io.fabric8.cdi.Utils.getFactoryMethodPath;
+import static io.fabric8.cdi.Utils.or;
+
 public class Fabric8Extension implements Extension {
 
+    private static final String INJECTION_POINT_UNKNOWN_TYPE = "Failed to process injection point on bean %s with type: %s. Don't know how to handle type.";
     private static final Set<FactoryMethodContext> factories = new LinkedHashSet<>();
+
 
     public void afterDiscovery(final @Observes AfterBeanDiscovery event, BeanManager beanManager) {
 
+        KubernetesHolder.useBeanManager(beanManager);
         //Only add the bean if no other bean is found.
         if (beanManager.getBeans(KubernetesClient.class).isEmpty()) {
             event.addBean(new KubernetesClientBean());
@@ -76,15 +87,18 @@ public class Fabric8Extension implements Extension {
                 @Override
                 public ServiceBean apply(ServiceBean bean) {
                     String serviceId = bean.getServiceName();
-                    String serviceProtocol = bean.getServiceProtocol();
-                    String servicePort = bean.getServicePort();
+                    String serviceProtocol = or(bean.getServiceProtocol(), getFactoryMethodProtocol(factoryMethodContext.getFactoryMethod().getJavaMember()));
+                    String servicePort = or(bean.getServicePort(), getFactoryMethodPort(factoryMethodContext.getFactoryMethod().getJavaMember()));
+                    String servicePath = or(bean.getServicePath(), getFactoryMethodPath(factoryMethodContext.getFactoryMethod().getJavaMember()));
                     Boolean serviceExternal = bean.getServiceExternal();
+                    Boolean serviceEndpoint = bean.getServiceEndpoint();
 
                     //Ensure that there is a factory String -> sourceType before adding producer.
                     if (!String.class.equals(factoryMethodContext.getSourceType())) {
-                        ServiceBean.getBean(serviceId, serviceProtocol, null, servicePort, serviceExternal, (Class<Object>) factoryMethodContext.getSourceType());
+                        ServiceBean.getBean(serviceId, serviceProtocol, servicePort, servicePath, null, serviceEndpoint, serviceExternal, factoryMethodContext.getSourceType());
                     }
-                    return bean.withProducer(new FactoryMethodProducer(factoryMethodContext.getBean(), factoryMethodContext.getFactoryMethod(), serviceId, serviceProtocol, servicePort, serviceExternal));
+
+                    return bean.withProducer(new FactoryMethodProducer(factoryMethodContext.getBean(), factoryMethodContext.getFactoryMethod(), serviceId, serviceProtocol, servicePort, servicePath));
                 }
             });
         }
@@ -96,7 +110,7 @@ public class Fabric8Extension implements Extension {
         for (ServiceUrlCollectionBean bean : ServiceUrlCollectionBean.getBeans()) {
             event.addBean(bean);
         }
-        
+
         for (ServiceBean bean : ServiceBean.getBeans()) {
             if (bean.getProducer() != null) {
                 event.addBean(bean);
@@ -108,8 +122,8 @@ public class Fabric8Extension implements Extension {
     }
 
     public <R> void processAnnotatedType(@Observes ProcessAnnotatedType<R> pat,
-                              BeanManager beanManager) {
-     AnnotatedType type = pat.getAnnotatedType();
+                                         BeanManager beanManager) {
+        AnnotatedType type = pat.getAnnotatedType();
     }
 
 
@@ -117,37 +131,41 @@ public class Fabric8Extension implements Extension {
         final InjectionPoint injectionPoint = event.getInjectionPoint();
         if (isServiceInjectionPoint(injectionPoint)) {
             Annotated annotated = injectionPoint.getAnnotated();
-            Alias alias = annotated.getAnnotation(Alias.class);
             ServiceName name = annotated.getAnnotation(ServiceName.class);
-            PortName port = annotated.getAnnotation(PortName.class);
             Protocol protocol = annotated.getAnnotation(Protocol.class);
+            PortName port = annotated.getAnnotation(PortName.class);
+            Path path = annotated.getAnnotation(Path.class);
+            Alias alias = annotated.getAnnotation(Alias.class);
+            Endpoint endpoint = annotated.getAnnotation(Endpoint.class);
             External external = annotated.getAnnotation(External.class);
-            
-            Boolean serviceEndpoint = annotated.getAnnotation(Endpoint.class) != null;
 
             String serviceName = name.value();
-            String serviceProtocol = protocol != null ? protocol.value() : "tcp";
-            String serviceAlias = alias != null ? alias.value() : null;
+            String serviceProtocol = protocol != null ? protocol.value() : null;
             String servicePort = port != null ? port.value() : null;
-            Boolean serviceExternal = external != null && external.value();
-            
+            String servicePath = path != null ? path.value() : null;
+            String serviceAlias = alias != null ? alias.value() : null;
+            Boolean serviceExternal = external != null ? external.value() : false;
+            Boolean serviceEndpoint = endpoint != null ? endpoint.value() : false;
+
             Type type = annotated.getBaseType();
-            if (type instanceof ParameterizedType && Instance.class.equals(((ParameterizedType)type).getRawType())) {
-                type =  ((ParameterizedType) type).getActualTypeArguments()[0];
+            if (type instanceof ParameterizedType && Instance.class.equals(((ParameterizedType) type).getRawType())) {
+                type = ((ParameterizedType) type).getActualTypeArguments()[0];
             }
 
             if (type.equals(String.class)) {
-                ServiceUrlBean.getBean(serviceName, serviceProtocol, serviceAlias, servicePort, serviceExternal);
-            } else if (serviceEndpoint && isGenericOf(type, List.class, String.class)) {
-                ServiceUrlCollectionBean.getBean(serviceName, serviceProtocol, serviceAlias, servicePort, serviceEndpoint, Types.LIST_OF_STRINGS);
-            } else if (serviceEndpoint && isGenericOf(type, List.class, null)) {
+                ServiceUrlBean.getBean(serviceName, serviceProtocol, servicePort, servicePath, serviceAlias, serviceEndpoint, serviceExternal);
+            } else if (isGenericOf(type, List.class, String.class)) {
+                ServiceUrlCollectionBean.getBean(serviceName, serviceProtocol, servicePort, servicePath, serviceAlias, serviceEndpoint, serviceExternal, Types.LIST_OF_STRINGS);
+            } else if (isGenericOf(type, List.class, null)) {
                 //TODO: Integrate with Factories(?)
-            } else if (serviceEndpoint && isGenericOf(type, Set.class, String.class)) {
-                ServiceUrlCollectionBean.getBean(serviceName, serviceProtocol, serviceAlias, servicePort, serviceEndpoint, Types.SET_OF_STRINGS);
-            } else if (serviceEndpoint && isGenericOf(type, Set.class, null)) {
+            } else if (isGenericOf(type, Set.class, String.class)) {
+                ServiceUrlCollectionBean.getBean(serviceName, serviceProtocol, servicePort, servicePath, serviceAlias, serviceEndpoint, serviceExternal, Types.SET_OF_STRINGS);
+            } else if (isGenericOf(type, Set.class, null)) {
                 //TODO: Integrate with Factories(?)
+            } else if (type instanceof Class) {
+                ServiceBean.getBean(serviceName, serviceProtocol, servicePort, servicePath, serviceAlias, serviceEndpoint, serviceExternal, type);
             } else {
-                ServiceBean.getBean(serviceName, serviceProtocol, serviceAlias, servicePort, serviceExternal, (Class) type);
+                throw new RuntimeException(String.format(INJECTION_POINT_UNKNOWN_TYPE, injectionPoint.getBean().getBeanClass(), type));
             }
 
             if (protocol == null) {
@@ -156,15 +174,21 @@ public class Fabric8Extension implements Extension {
             if (port == null) {
                 setDefaultPort(event);
             }
+            if (path == null) {
+                setDefaultPath(event);
+            }
+            if (endpoint == null) {
+                setDefaultEndpoint(event);
+            }
             if (external == null) {
-                setExternalFalse(event);
+                setDefaultExternal(event);
             }
         } else if (isConfigurationInjectionPoint(injectionPoint)) {
             Annotated annotated = injectionPoint.getAnnotated();
             Configuration configuration = annotated.getAnnotation(Configuration.class);
             Type type = injectionPoint.getType();
             String configurationId = configuration.value();
-            ConfigurationBean.getBean(configurationId, (Class) type);
+            ConfigurationBean.getBean(configurationId, type);
         }
     }
 
@@ -174,7 +198,7 @@ public class Fabric8Extension implements Extension {
             if (factory != null) {
                 final Type sourceType = getSourceType(method);
                 final Type returnType = method.getJavaMember().getReturnType();
-                factories.add(new FactoryMethodContext(event.getBean(), (Class) sourceType, (Class) returnType, method));
+                factories.add(new FactoryMethodContext(event.getBean(), sourceType, returnType, method));
             }
         }
     }
@@ -203,15 +227,15 @@ public class Fabric8Extension implements Extension {
         }
         return false;
     }
-    
-    
+
+
     private <T, X> void setDefaultProtocol(ProcessInjectionPoint<T, X> event) {
         //if protocol is not specified decorate injection point with "default" protocol.
         event.setInjectionPoint(new DelegatingInjectionPoint(event.getInjectionPoint()) {
             @Override
             public Set<Annotation> getQualifiers() {
                 Set<Annotation> qualifiers = new LinkedHashSet<>(super.getQualifiers());
-                qualifiers.add(new ProtocolQualifier("tcp"));
+                qualifiers.add(new ProtocolQualifier(""));
                 return Collections.unmodifiableSet(qualifiers);
             }
         });
@@ -229,13 +253,37 @@ public class Fabric8Extension implements Extension {
         });
     }
 
-    private <T, X> void setExternalFalse(ProcessInjectionPoint<T, X> event) {
-        //if protocol is not specified decorate injection point with "default" protocol.
+    private <T, X> void setDefaultPath(ProcessInjectionPoint<T, X> event) {
+        //if path is not specified decorate injection point with "default" path.
+        event.setInjectionPoint(new DelegatingInjectionPoint(event.getInjectionPoint()) {
+            @Override
+            public Set<Annotation> getQualifiers() {
+                Set<Annotation> qualifiers = new LinkedHashSet<>(super.getQualifiers());
+                qualifiers.add(new PathQualifier(""));
+                return Collections.unmodifiableSet(qualifiers);
+            }
+        });
+    }
+
+    private <T, X> void setDefaultExternal(ProcessInjectionPoint<T, X> event) {
+        //if external is not specified decorate injection point with "default" external=false.
         event.setInjectionPoint(new DelegatingInjectionPoint(event.getInjectionPoint()) {
             @Override
             public Set<Annotation> getQualifiers() {
                 Set<Annotation> qualifiers = new LinkedHashSet<>(super.getQualifiers());
                 qualifiers.add(new ExternalQualifier(false));
+                return Collections.unmodifiableSet(qualifiers);
+            }
+        });
+    }
+
+    private <T, X> void setDefaultEndpoint(ProcessInjectionPoint<T, X> event) {
+        //if endpoint is not specified decorate injection point with "default" endpoint=false.
+        event.setInjectionPoint(new DelegatingInjectionPoint(event.getInjectionPoint()) {
+            @Override
+            public Set<Annotation> getQualifiers() {
+                Set<Annotation> qualifiers = new LinkedHashSet<>(super.getQualifiers());
+                qualifiers.add(new EndpointQualifier(false));
                 return Collections.unmodifiableSet(qualifiers);
             }
         });
@@ -254,7 +302,7 @@ public class Fabric8Extension implements Extension {
             return false;
         }
     }
-    
+
 
     /**
      * Checks if the InjectionPoint is annotated with the @Service qualifier.
@@ -271,4 +319,5 @@ public class Fabric8Extension implements Extension {
         }
         return false;
     }
+
 }

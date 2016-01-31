@@ -15,6 +15,7 @@
  */
 package io.fabric8.arquillian;
 
+import io.fabric8.arquillian.kubernetes.TestListener;
 import io.fabric8.arquillian.kubernetes.ClientCreator;
 import io.fabric8.arquillian.kubernetes.Configuration;
 import io.fabric8.arquillian.kubernetes.Configurer;
@@ -24,8 +25,10 @@ import io.fabric8.arquillian.kubernetes.SessionListener;
 import io.fabric8.arquillian.kubernetes.SuiteListener;
 import io.fabric8.arquillian.kubernetes.enricher.ClientResourceProvider;
 import io.fabric8.arquillian.kubernetes.enricher.ControllerResourceProvider;
+import io.fabric8.arquillian.kubernetes.enricher.J4pClientProvider;
 import io.fabric8.arquillian.kubernetes.enricher.JolokiaClientsProvider;
 import io.fabric8.arquillian.kubernetes.enricher.PodListResourceProvider;
+import io.fabric8.arquillian.kubernetes.enricher.PodResourceProvider;
 import io.fabric8.arquillian.kubernetes.enricher.ReplicationControllerListResourceProvider;
 import io.fabric8.arquillian.kubernetes.enricher.ReplicationControllerResourceProvider;
 import io.fabric8.arquillian.kubernetes.enricher.ServiceListResourceProvider;
@@ -49,12 +52,15 @@ public class KubernetesExtension implements LoadableExtension {
                 .observer(ControllerCreator.class)
                 .observer(LoggerFactory.class)
                 .observer(SuiteListener.class)
+                .observer(TestListener.class)
                 .observer(SessionListener.class);
 
         builder.service(ResourceProvider.class, ClientResourceProvider.class)
                 .service(ResourceProvider.class, ControllerResourceProvider.class)
                 .service(ResourceProvider.class, JolokiaClientsProvider.class)
+                .service(ResourceProvider.class, J4pClientProvider.class)
                 .service(ResourceProvider.class, PodListResourceProvider.class)
+                .service(ResourceProvider.class, PodResourceProvider.class)
                 .service(ResourceProvider.class, ReplicationControllerListResourceProvider.class)
                 .service(ResourceProvider.class, ReplicationControllerResourceProvider.class)
                 .service(ResourceProvider.class, ServiceListResourceProvider.class)

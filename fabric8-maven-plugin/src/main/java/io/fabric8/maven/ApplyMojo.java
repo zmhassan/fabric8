@@ -43,6 +43,7 @@ import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
+import org.apache.maven.project.MavenProject;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,12 +62,14 @@ import static io.fabric8.kubernetes.api.KubernetesHelper.loadJson;
 @Mojo(name = "apply", requiresDependencyResolution = ResolutionScope.RUNTIME, defaultPhase = LifecyclePhase.INSTALL)
 public class ApplyMojo extends AbstractFabric8Mojo {
 
-
     /**
      * Used to look up Artifacts in the remote repository.
      */
     @Component
     protected ArtifactResolver resolver;
+
+    @Parameter(defaultValue = "${project}", readonly = true, required = false)
+    private MavenProject project;
 
     /**
      * Location of the localRepository repository.
@@ -85,6 +88,12 @@ public class ApplyMojo extends AbstractFabric8Mojo {
      */
     @Parameter(property = "fabric8.apply.create", defaultValue = "true")
     private boolean createNewResources;
+
+    /**
+     * Should we use rolling upgrades to apply changes?
+     */
+    @Parameter(property = "fabric8.rolling", defaultValue = "false")
+    private boolean rollingUpgrades;
 
     /**
      * Should we fail if there is no kubernetes json
@@ -157,7 +166,7 @@ public class ApplyMojo extends AbstractFabric8Mojo {
         KubernetesClient kubernetes = getKubernetes();
         
         if (kubernetes.getMasterUrl() == null || Strings.isNullOrBlank(kubernetes.getMasterUrl().toString())) {
-        	throw new MojoFailureException("Can't find Kubernetes master URL");
+        	throw new MojoFailureException("Cannot find Kubernetes master URL");
         }
         
         getLog().info("Using kubernetes at: " + kubernetes.getMasterUrl() + " in namespace " + getNamespace());
@@ -174,10 +183,13 @@ public class ApplyMojo extends AbstractFabric8Mojo {
             controller.setIgnoreRunningOAuthClients(ignoreRunningOAuthClients);
             controller.setProcessTemplatesLocally(processTemplatesLocally);
             controller.setDeletePodsOnReplicationControllerUpdate(deletePodsOnReplicationControllerUpdate);
+            controller.setRollingUpgrade(rollingUpgrades);
+            controller.setRollingUpgradePreserveScale(isRollingUpgradePreserveScale());
 
             boolean openShift = KubernetesHelper.isOpenShift(kubernetes);
-            getLog().info("Is OpenShift: " + openShift);
-            if (!openShift) {
+            if (openShift) {
+                getLog().info("OpenShift platform detected");
+            } else {
                 disableOpenShiftFeatures(controller);
             }
 
@@ -185,7 +197,7 @@ public class ApplyMojo extends AbstractFabric8Mojo {
             String fileName = json.getName();
             Object dto = KubernetesHelper.loadJson(json);
             if (dto == null) {
-                throw new MojoFailureException("Could not load kubernetes json: " + json);
+                throw new MojoFailureException("Cannot load kubernetes json: " + json);
             }
 
             // lets check we have created the namespace
@@ -240,6 +252,23 @@ public class ApplyMojo extends AbstractFabric8Mojo {
         }
     }
 
+    public boolean isRollingUpgrades() {
+        return rollingUpgrades;
+    }
+
+    public void setRollingUpgrades(boolean rollingUpgrades) {
+        this.rollingUpgrades = rollingUpgrades;
+    }
+
+    public boolean isRollingUpgradePreserveScale() {
+        return false;
+    }
+
+    @Override
+    public MavenProject getProject() {
+        return project;
+    }
+
     /**
      * Lets disable OpenShift-only features if we are not running on OpenShift
      */
@@ -260,19 +289,15 @@ public class ApplyMojo extends AbstractFabric8Mojo {
     protected void createRoutes(KubernetesClient kubernetes, Collection<HasMetadata> collection) {
         String routeDomainPostfix = this.routeDomain;
         Log log = getLog();
-        if (Strings.isNullOrBlank(routeDomainPostfix)) {
-            log.warn("No fabric8.domain property or $KUBERNETES_DOMAIN environment variable so cannot create any OpenShift Routes");
-            return;
-        }
         String namespace = getNamespace();
         // lets get the routes first to see if we should bother
         try {
             RouteList routes = kubernetes.adapt(OpenShiftClient.class).routes().inNamespace(namespace).list();
             if (routes != null) {
-                List<Route> items = routes.getItems();
+                routes.getItems();
             }
         } catch (Exception e) {
-            log.warn("Could not load routes; we maybe are not connected to an OpenShift environment? " + e, e);
+            log.warn("Cannot load OpenShift Routes; maybe not connected to an OpenShift platform? " + e, e);
             return;
         }
         List<Route> routes = new ArrayList<>();
@@ -300,10 +325,14 @@ public class ApplyMojo extends AbstractFabric8Mojo {
             objectRef.setName(id);
             objectRef.setNamespace(namespace);
             routeSpec.setTo(objectRef);
-            String host = Strings.stripSuffix(Strings.stripSuffix(id, "-service"), ".");
-            routeSpec.setHost(host + "." + Strings.stripPrefix(routeDomainPostfix, "."));
+            if (!Strings.isNullOrBlank(routeDomainPostfix)) {
+                String host = Strings.stripSuffix(Strings.stripSuffix(id, "-service"), ".");
+                routeSpec.setHost(host + "." + Strings.stripPrefix(routeDomainPostfix, "."));
+            } else {
+                routeSpec.setHost("");
+            }
             route.setSpec(routeSpec);
-            String json = null;
+            String json;
             try {
                 json = KubernetesHelper.toJson(route);
             } catch (JsonProcessingException e) {
@@ -319,7 +348,7 @@ public class ApplyMojo extends AbstractFabric8Mojo {
      * <p/>
      * By default lets ignore the kubernetes services and any service which does not expose ports 80 and 443
      *
-     * @returns true if we should create an OpenShift Route for this service.
+     * @return true if we should create an OpenShift Route for this service.
      */
     protected static boolean shouldCreateRouteForService(Log log, Service service, String id) {
         if ("kubernetes".equals(id) || "kubernetes-ro".equals(id)) {
@@ -344,7 +373,7 @@ public class ApplyMojo extends AbstractFabric8Mojo {
 
     public static void loadDependency(Log log, Collection<KubernetesList> kubeConfigs, File file) throws IOException {
         if (file.isFile()) {
-            log.info("Loading file " + file);
+            log.debug("Loading file " + file);
             addConfig(kubeConfigs, loadJson(file));
         } else {
             File[] children = file.listFiles();

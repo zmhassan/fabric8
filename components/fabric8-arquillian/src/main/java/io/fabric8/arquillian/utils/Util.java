@@ -28,29 +28,18 @@ import io.fabric8.kubernetes.client.KubernetesClientException;
 import io.fabric8.utils.GitHelpers;
 import io.fabric8.utils.MultiException;
 import io.fabric8.utils.Objects;
-import io.fabric8.utils.PropertiesHelper;
 import io.fabric8.utils.Strings;
 import io.fabric8.utils.Systems;
-import io.fabric8.utils.Zips;
-import org.jboss.shrinkwrap.resolver.api.maven.Maven;
+import org.jboss.arquillian.test.spi.TestResult;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.jar.JarEntry;
-import java.util.jar.JarInputStream;
 
-import static io.fabric8.arquillian.kubernetes.Constants.DEFAULT_CONFIG_FILE_NAME;
 import static io.fabric8.kubernetes.api.KubernetesHelper.getPortalIP;
 import static io.fabric8.kubernetes.api.KubernetesHelper.getPorts;
 
@@ -83,7 +72,7 @@ public class Util {
 
     }
 
-    public static void cleanupSession(KubernetesClient client, Configuration configuration, Session session) throws MultiException {
+    public static void cleanupSession(KubernetesClient client, Configuration configuration, Session session, String status) throws MultiException {
         if (configuration.isNamespaceCleanupEnabled()) {
             waitUntilWeCanDestroyNamespace(session);
             List<Throwable> errors = new ArrayList<>();
@@ -96,8 +85,11 @@ public class Util {
             if (!errors.isEmpty()) {
                 throw new MultiException("Error while cleaning up session.", errors);
             }
+        } else {
+            Namespaces.updateNamespaceStatus(client, session, status);
         }
     }
+
 
     protected static void waitUntilWeCanDestroyNamespace(Session session) {
         final Logger log = session.getLogger();
@@ -193,7 +185,6 @@ public class Util {
         }
 
     }
-
     public static String findGitUrl(Session session, File dir) {
         try {
             return GitHelpers.extractGitUrl(dir);
@@ -208,68 +199,11 @@ public class Util {
         return new File(basedir);
     }
 
-    public static Map<String, String> createNamespaceAnnotations(Session session) {
-        Map<String, String> annotations = new HashMap<>();
-        File dir = getProjectBaseDir(session);
-        String gitUrl = findGitUrl(session, dir);
-
-        if (Strings.isNotBlank(gitUrl)) {
-            annotations.put("fabric8.devops/gitUrl", gitUrl);
+    public static String getSessionStatus(Session session) {
+        if (session.getFailed().get() > 0) {
+            return "FAILED";
+        } else {
+            return "PASSED";
         }
-        // lets see if there's a maven generated set of pom properties
-        File pomProperties = new File(dir, "target/maven-archiver/pom.properties");
-        if (pomProperties.isFile()) {
-            try {
-                Properties properties = new Properties();
-                properties.load(new FileInputStream(pomProperties));
-                Map<String, String> map = PropertiesHelper.toMap(properties);
-                for (Map.Entry<String, String> entry : map.entrySet()) {
-                    String key = entry.getKey();
-                    String value = entry.getValue();
-                    if (Strings.isNotBlank(key) && Strings.isNotBlank(value)) {
-                        annotations.put("fabric8.devops/" + key, value);
-                    }
-                }
-            } catch (IOException e) {
-                session.getLogger().warn("Failed to load " + pomProperties + " file to annotate the namespace: " + e);
-            }
-        }
-        return annotations;
-    }
-
-    public static List<String> getMavenDependencies(Session session) throws IOException {
-        List<String> dependencies = new ArrayList<>();
-        try {
-            File[] files = Maven.resolver().loadPomFromFile("pom.xml").importTestDependencies().resolve().withoutTransitivity().asFile();
-            for (File f : files) {
-                if (f.getName().endsWith("jar") && hasKubernetesJson(f)) {
-                    Path dir = Files.createTempDirectory(session.getId());
-                    try (FileInputStream fis = new FileInputStream(f); JarInputStream jis = new JarInputStream(fis)) {
-                        Zips.unzip(new FileInputStream(f), dir.toFile());
-                        File jsonPath = dir.resolve(DEFAULT_CONFIG_FILE_NAME).toFile();
-                        if (jsonPath.exists()) {
-                            dependencies.add(jsonPath.toURI().toString());
-                        }
-                    }
-                } else if (f.getName().endsWith(".json")) {
-                    dependencies.add(f.toURI().toString());
-                }
-            }
-        } catch (Exception e) {
-            session.getLogger().warn("Skipping maven project dependencies. Caused by:" + e.getMessage());
-        }
-        return dependencies;
-    }
-
-
-    private static boolean hasKubernetesJson(File f) throws IOException {
-        try (FileInputStream fis = new FileInputStream(f); JarInputStream jis = new JarInputStream(fis)) {
-            for (JarEntry entry = jis.getNextJarEntry(); entry != null; entry = jis.getNextJarEntry()) {
-                if (entry.getName().equals(DEFAULT_CONFIG_FILE_NAME)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 }

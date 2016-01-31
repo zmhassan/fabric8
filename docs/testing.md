@@ -135,7 +135,7 @@ One thing to be careful of is that adding test dependencies on kubernetes.json w
 
 ### Example
 
-There are lots of examples in the [quickstarts](http://fabric8.io/guide/quickstarts.html).
+There are lots of examples in the [quickstarts](quickstarts/index.md).
 
 Here is an [example Arquillian Fabric8 integration test](https://github.com/fabric8io/fabric8/blob/master/itests/src/test/java/io/fabric8/itests/BrokerProducerConsumerIT.java#L57) that tests that an AMQ broker, producer and consumer startup and properly produce and consume messages correctly.
 
@@ -150,7 +150,7 @@ Also you may want to set the **KUBERNETES_TRUST_CERTIFICATES** variable to allow
     export KUBERNETES_TRUST_CERTIFICATES=true
     export KUBERNETES_MASTER=http://localhost:8443
 
-Note that this can be any kubernetes environment (a kubernetes installation, OpenShift, RHEL Atomic or GKE) or even a [Jube installation](http://fabric8.io/jube/getStarted.html). Also note that different integration tests can be running at the same time on the same kubernetes environment.
+Note that this can be any kubernetes environment (a kubernetes installation, OpenShift, RHEL Atomic or GKE). Also note that different integration tests can be running at the same time on the same kubernetes environment.
 
 If you find that you are getting exceptions and output of the form:
 
@@ -176,6 +176,6 @@ To be able to use this library add this to your [Apache Maven](http://maven.apac
             <dependency>
                 <groupId>io.fabric8</groupId>
                 <artifactId>fabric8-arquillian</artifactId>
-                <version>2.2.40</version>
+                <version>2.2.89</version>
                 <scope>test</scope>
             </dependency>

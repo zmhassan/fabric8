@@ -27,7 +27,7 @@ public final class Qualifiers {
         //Utility
     }
 
-    public static Annotation[] create(String serviceId, String protocol, String port, Boolean endpoint, Boolean external) {
+    public static Annotation[] create(String serviceId, String protocol, String port, String path, Boolean endpoint, Boolean external) {
         if (serviceId == null) {
             throw new IllegalArgumentException("Service Id cannot be null.");
         }
@@ -36,16 +36,23 @@ public final class Qualifiers {
         qualifiers.add(new ServiceNameQualifier(serviceId));
         if (!Strings.isNullOrBlank(protocol)) {
             qualifiers.add(new ProtocolQualifier(protocol));
+        } else {
+            qualifiers.add(new ProtocolQualifier(""));
         }
+
         if (!Strings.isNullOrBlank(port)) {
             qualifiers.add(new PortQualifier(port));
         } else {
             qualifiers.add(new PortQualifier(""));
         }
-        if (endpoint) {
-            qualifiers.add(new EndpointQualifier());
+
+        if (!Strings.isNullOrBlank(path)) {
+            qualifiers.add(new PathQualifier(path));
+        } else {
+            qualifiers.add(new PathQualifier(""));
         }
-        
+
+        qualifiers.add(new EndpointQualifier(endpoint));
         qualifiers.add(new ExternalQualifier(external));
         return qualifiers.toArray(new Annotation[qualifiers.size()]);
     }

@@ -15,6 +15,9 @@
  */
 package io.fabric8.mq.core;
 
+import javax.jms.Connection;
+import javax.jms.JMSException;
+
 import org.apache.activemq.ActiveMQConnectionFactory;
 
 /**
@@ -35,15 +38,25 @@ public class MQConnectionFactory extends ActiveMQConnectionFactory {
         setPassword(password);
     }
 
-
     @Override
     public String getBrokerURL() {
         return MQs.getBrokerURL(getServiceName(), getFailoverUrlParameters());
     }
 
     @Override
-    public void setBrokerURL(String brokerURL) {
-        throw new UnsupportedOperationException("brokerURL property cannot be modified for this component. Please modify the serviceName instead!");
+    public Connection createConnection() throws JMSException {
+        // make sure brokerUrl is set because ActiveMQ expect its set using the setBrokerUrl method
+        String url = getBrokerURL();
+        setBrokerURL(url);
+        return super.createActiveMQConnection();
+    }
+
+    @Override
+    public Connection createConnection(String userName, String password) throws JMSException {
+        // make sure brokerUrl is set because ActiveMQ expect its set using the setBrokerUrl method
+        String url = getBrokerURL();
+        setBrokerURL(url);
+        return super.createActiveMQConnection(userName, password);
     }
 
     public String getServiceName() {

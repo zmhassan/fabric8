@@ -15,50 +15,45 @@
  */
 package io.fabric8.cdi;
 
-
 import io.fabric8.kubernetes.api.KubernetesHelper;
 import io.fabric8.kubernetes.api.model.EndpointAddress;
+import io.fabric8.kubernetes.api.model.EndpointPort;
 import io.fabric8.kubernetes.api.model.EndpointSubset;
+import io.fabric8.kubernetes.api.model.Endpoints;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.utils.Strings;
+import io.fabric8.utils.URLUtils;
 
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
-
 
 public class Services {
 
     public static final String DEFAULT_PROTO = "tcp";
 
-    public static String toServiceUrl(String serviceName, String serviceProtocol, String servicePortName, boolean serviceExternal) {
-        String serviceNamespace = KubernetesHelper.defaultNamespace();
-        return KubernetesHelper.getServiceURL(KubernetesHolder.getClient(), serviceName, serviceNamespace, serviceProtocol, servicePortName, serviceExternal);
+    public static String toServiceUrl(String serviceName, String serviceProtocol, String servicePortName, String servicePath, boolean serviceExternal) {
+        KubernetesClient client = KubernetesHolder.getClient();
+        String serviceNamespace = client.getNamespace();
+        String actualProtocol = Strings.isNullOrBlank(serviceProtocol) ? DEFAULT_PROTO : serviceProtocol;
+        return URLUtils.pathJoin(KubernetesHelper.getServiceURL(client, serviceName, serviceNamespace, actualProtocol, servicePortName, serviceExternal), servicePath);
     }
 
-    public static List<String> toServiceEndpointUrl(String serviceId, String serviceProtocol) {
+    public static List<String> toServiceEndpointUrl(String serviceId, String serviceProtocol, String servicePort) {
         List<String> endpoints = new ArrayList<>();
-        String namespace = KubernetesHelper.defaultNamespace();
-        String serviceProto = serviceProtocol != null ? serviceProtocol : DEFAULT_PROTO;
+        KubernetesClient client = KubernetesHolder.getClient();
+        String namespace = client.getNamespace();
+        String actualProtocol = serviceProtocol != null ? serviceProtocol : DEFAULT_PROTO;
 
-        try {
-            for (String endpoint : KubernetesHelper.lookupServiceInDns(serviceId)) {
-                endpoints.add(serviceProto + "://" + endpoint);
-            }
-        } catch (UnknownHostException e) {
-            //ignore and fallback to the api.
-        }
-        
-        if (!endpoints.isEmpty()) {
-            return endpoints;
-        }
-        
-        for (io.fabric8.kubernetes.api.model.Endpoints item : KubernetesHolder.getClient().endpoints().inNamespace(namespace).list().getItems()) {
-            if (item.getMetadata().getName().equals(serviceId) && (namespace == null || namespace.equals(item.getMetadata().getNamespace()))) {
-                for (EndpointSubset subset : item.getSubsets()) {
-                    for (EndpointAddress address : subset.getAddresses()) {
-                        endpoints.add(serviceProto +"://" +address.getIp());
+        Endpoints item = KubernetesHolder.getClient().endpoints().inNamespace(namespace).withName(serviceId).get();
+        if (item != null) {
+            for (EndpointSubset subset : item.getSubsets()) {
+                for (EndpointAddress address : subset.getAddresses()) {
+                    for (EndpointPort endpointPort : subset.getPorts()) {
+                        if (servicePort == null || servicePort.equals(endpointPort.getName())) {
+                            endpoints.add(actualProtocol + "://" + address.getIp() + ":" + endpointPort.getPort());
+                        }
                     }
                 }
-                break;
             }
         }
         return endpoints;

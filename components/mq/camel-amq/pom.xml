@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.fabric8.mq</groupId>
     <artifactId>mq</artifactId>
-    <version>2.2.41-SNAPSHOT</version>
+    <version>2.2.90-SNAPSHOT</version>
   </parent>
 
   <groupId>io.fabric8.mq</groupId>
@@ -54,6 +54,32 @@
       <groupId>org.apache.activemq</groupId>
       <artifactId>activemq-osgi</artifactId>
       <optional>true</optional>
+      <exclusions>
+        <!-- exclude stuff not needed -->
+        <exclusion>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>activemq-web</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>activemq-http</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.activemq</groupId>
+          <artifactId>activemq-leveldb-store</artifactId>
+        </exclusion>
+        <!-- for the security fix in commons-collections -->
+        <exclusion>
+          <groupId>commons-collections</groupId>
+          <artifactId>commons-collections</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- for the security fix in commons-collections -->
+    <dependency>
+      <groupId>commons-collections</groupId>
+      <artifactId>commons-collections</artifactId>
+      <version>${commons.collections.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.activemq</groupId>
@@ -98,6 +124,14 @@
         <groupId>org.apache.camel</groupId>
         <artifactId>camel-package-maven-plugin</artifactId>
         <version>${camel.version}</version>
+        <dependencies>
+          <!-- for the security fix in commons-collections -->
+          <dependency>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
+            <version>${commons.collections.version}</version>
+          </dependency>
+        </dependencies>
         <executions>
           <execution>
             <goals>
@@ -109,15 +143,7 @@
       </plugin>
     </plugins>
   </build>
-  <reporting>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.camel</groupId>
-        <artifactId>camel-package-maven-plugin</artifactId>
-        <version>${camel.version}</version>
-      </plugin>
-    </plugins>
-  </reporting>
+
   <profiles>
     <!-- enables the APT dependency so that it can be disabled in IDE builds -->
     <profile>

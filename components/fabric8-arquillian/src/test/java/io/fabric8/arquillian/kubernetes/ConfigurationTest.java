@@ -1,21 +1,22 @@
-/*
- * Copyright 2005-2014 Red Hat, Inc.                                    
- *                                                                      
- * Red Hat licenses this file to you under the Apache License, version  
- * 2.0 (the "License"); you may not use this file except in compliance  
- * with the License.  You may obtain a copy of the License at           
- *                                                                      
- *    http://www.apache.org/licenses/LICENSE-2.0                        
- *                                                                      
- * Unless required by applicable law or agreed to in writing, software  
- * distributed under the License is distributed on an "AS IS" BASIS,    
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or      
- * implied.  See the License for the specific language governing        
- * permissions and limitations under the License.
+/**
+ *  Copyright 2005-2015 Red Hat, Inc.
+ *
+ *  Red Hat licenses this file to you under the Apache License, version
+ *  2.0 (the "License"); you may not use this file except in compliance
+ *  with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+ *  implied.  See the License for the specific language governing
+ *  permissions and limitations under the License.
  */
-
 package io.fabric8.arquillian.kubernetes;
 
+import io.fabric8.kubernetes.client.Config;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -27,6 +28,7 @@ import static io.fabric8.arquillian.kubernetes.Constants.ENVIRONMENT_CONFIG_RESO
 import static io.fabric8.arquillian.kubernetes.Constants.ENVIRONMENT_CONFIG_URL;
 import static io.fabric8.arquillian.kubernetes.Constants.ENVIRONMENT_DEPENDENCIES;
 import static io.fabric8.arquillian.kubernetes.Constants.ENVIRONMENT_INIT_ENABLED;
+import static io.fabric8.arquillian.kubernetes.Constants.FABRIC8_ENVIRONMENT;
 import static io.fabric8.arquillian.kubernetes.Constants.GOFABRIC8_ENABLED;
 import static io.fabric8.arquillian.kubernetes.Constants.KUBERNETES_DOMAIN;
 import static io.fabric8.arquillian.kubernetes.Constants.KUBERNETES_MASTER;
@@ -41,8 +43,10 @@ import static io.fabric8.arquillian.kubernetes.Constants.WAIT_FOR_SERVICE_CONNEC
 import static io.fabric8.arquillian.kubernetes.Constants.WAIT_FOR_SERVICE_LIST;
 import static io.fabric8.arquillian.kubernetes.Constants.WAIT_POLL_INTERVAL;
 import static io.fabric8.arquillian.kubernetes.Constants.WAIT_TIMEOUT;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import static org.junit.Assert.*;
 public class ConfigurationTest {
 
     @Before
@@ -51,6 +55,7 @@ public class ConfigurationTest {
         System.getProperties().remove(KUBERNETES_DOMAIN);
         System.getProperties().remove(KUBERNETES_NAMESPACE);
 
+        System.getProperties().remove(FABRIC8_ENVIRONMENT);
         System.getProperties().remove(NAMESPACE_LAZY_CREATE_ENABLED);
         System.getProperties().remove(NAMESPACE_CLEANUP_TIMEOUT);
         System.getProperties().remove(NAMESPACE_CLEANUP_CONFIRM_ENABLED);
@@ -71,6 +76,11 @@ public class ConfigurationTest {
 
         System.getProperties().remove(ANSI_LOGGER_ENABLED);
         System.getProperties().remove(GOFABRIC8_ENABLED);
+    }
+
+    @After
+    public void tearDown() {
+        setUp();
     }
 
     @Test
@@ -125,7 +135,17 @@ public class ConfigurationTest {
     }
 
     @Test
-    public void testConfigWithSystemProperteis() {
+    public void testFallbackToClientsDefaults() {
+        //Let's provide a fake kubeconfig for the client.
+        System.setProperty(Config.KUBERNETES_KUBECONFIG_FILE, getClass().getResource("/test-kubeconfig").getFile());
+        Configuration config = Configuration.fromMap(new HashMap<String, String>());
+        assertNotNull(config);
+
+        assertEquals("https://from.kube.config:8443/", config.getMasterUrl());
+    }
+
+    @Test
+    public void testConfigWithSystemProperties() {
         String expctedMaster = "http://expected.master:80";
         String expectedNamespace = "expected.namespace";
         String expectedDomain = "expected.domain";
@@ -176,7 +196,7 @@ public class ConfigurationTest {
     }
 
     @Test
-    public void testConfigWithSystemProperteisAndConfigMap() {
+    public void testConfigWithSystemPropertiesAndConfigMap() {
         String expctedMaster = "http://expected.master:80";
         String expectedNamespace = "expected.namespace";
         String expectedDomain = "expected.domain";
@@ -235,5 +255,22 @@ public class ConfigurationTest {
         assertTrue(configuration.isNamespaceCleanupEnabled());
         assertTrue(configuration.isNamespaceLazyCreateEnabled());
         assertTrue(configuration.isWaitForServiceConnectionEnabled());
+    }
+
+
+    @Test(expected = IllegalStateException.class)
+    public void testNamespaceConflict() {
+        Map<String, String> map = new HashMap<>();
+        map.put(NAMESPACE_TO_USE, "namesapce1");
+        map.put(FABRIC8_ENVIRONMENT, "testing");
+        map.put("testing.namesapce", "namespace2");
+        Configuration.fromMap(map);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testMissingEnvironmentNamespace() {
+        Map<String, String> map = new HashMap<>();
+        map.put(FABRIC8_ENVIRONMENT, "testing");
+        Configuration.fromMap(map);
     }
 }

@@ -56,6 +56,7 @@ import io.fabric8.maven.support.JsonSchemas;
 import io.fabric8.openshift.api.model.DeploymentConfig;
 import io.fabric8.openshift.api.model.Template;
 import io.fabric8.utils.Files;
+import io.fabric8.utils.GitHelpers;
 import io.fabric8.utils.Objects;
 import io.fabric8.utils.Strings;
 import io.fabric8.utils.Systems;
@@ -64,8 +65,9 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
-import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 
 import static io.fabric8.utils.PropertiesHelper.findPropertiesWithPrefix;
@@ -176,7 +178,46 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
     @Parameter(property = "fabric8.excludedFiles", defaultValue = "io.fabric8.agent.properties")
     private String[] filesToBeExcluded;
 
+    /**
+     * Is this build a CD Pipeline build (and so raise warning levels if we cannot detect CD related
+     * metadata for the build,
+     * such as the git commit id, git URL, Jenkins job URL etc
+     */
+    @Parameter(property = "fabric8.cd.build", defaultValue = "false")
+    private boolean cdBuild;
+
+    /**
+     * The environment variable used to detect if the current build is inside a CD Pipeline build
+     * to enable verbose logging if we cannot auto default the CD related metadata for the build,
+     * such as the git commit id, git URL, Jenkins job URL etc
+     */
+    @Parameter(property = "fabric8.cd.envVar", defaultValue = "JENKINS_HOME")
+    private String cdEnvVarName;
+
+    /**
+     * The docker image to use.
+     */
+    @Parameter(property = "docker.image")
+    private String dockerImage;
+
+    /**
+     * Whether to try to fetch extended environment metadata during the <tt>json</tt>, or <tt>apply</tt> goals.
+     * <p/>
+     * The following ENV variables is supported: <tt>BUILD_URI</tt>, <tt>GIT_URL</tt>, <tt>GIT_COMMIT</tt>, <tt>GIT_BRANCH</tt>
+     * If any of these ENV variable is empty then if this option is enabled, then the value is attempted to
+     * be fetched from an online connection to the Kubernetes master. If the connection fails then the
+     * goal will report this as a failure gently and continue.
+     * <p/>
+     * This option can be turned off, to avoid any live connection to the Kubernetes master.
+     */
+    @Parameter(property = "fabric8.extended.environment.metadata", defaultValue = "true")
+    private Boolean extendedMetadata;
+
     protected static File copyReadMe(File src, File appBuildDir) throws IOException {
+        return copyReadMe(src, appBuildDir, null);
+    }
+
+    protected static File copyReadMe(File src, File appBuildDir, String outputFileName) throws IOException {
         File[] files = src.listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
@@ -185,7 +226,10 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
         });
         if (files != null && files.length == 1) {
             File readme = files[0];
-            File outFile = new File(appBuildDir, readme.getName());
+            if (Strings.isNullOrBlank(outputFileName)) {
+                outputFileName = readme.getName();
+            }
+            File outFile = new File(appBuildDir, outputFileName);
             Files.copy(readme, outFile);
             return outFile;
         }
@@ -201,6 +245,7 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
         }
     }
 
+    @Override
     public MavenProject getProject() {
         return project;
     }
@@ -361,7 +406,7 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
                 if (Strings.isNotBlank(value)) {
                     String oldValue = annotations.get(annotation);
                     if (Strings.isNotBlank(oldValue)) {
-                        getLog().warn("Not adding annotation `" + annotation + "` to " + KubernetesHelper.getKind(resource) + " " + KubernetesHelper.getName(resource) + " with value `" + value + "` as there is already an annotation value of `" + oldValue + "`");
+                        getLog().debug("Not adding annotation `" + annotation + "` to " + KubernetesHelper.getKind(resource) + " " + KubernetesHelper.getName(resource) + " with value `" + value + "` as there is already an annotation value of `" + oldValue + "`");
                     } else {
                         annotations.put(annotation, value);
                     }
@@ -378,8 +423,19 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
      * @return the value of the environment variable name if it can be found or calculated
      */
     protected String tryDefaultAnnotationEnvVar(String envVarName) {
+        // only do this if enabled
+        if (extendedMetadata != null && !extendedMetadata) {
+            return null;
+        }
+
         MavenProject rootProject = getRootProject();
         File basedir = rootProject.getBasedir();
+        if (basedir == null) {
+            basedir = getProject().getBasedir();
+        }
+        if (basedir == null) {
+            basedir = new File(System.getProperty("basedir", "."));
+        }
         ProjectConfig projectConfig = ProjectConfigs.loadFromFolder(basedir);
         String repoName = rootProject.getArtifactId();
 
@@ -397,7 +453,7 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
                         if (Strings.isNotBlank(username)) {
                             name = ProjectRepositories.createBuildName(username, repoName);
                         } else {
-                            getLog().warn("Cannot auto-default BUILD_URL as there is no environment variable `" + userEnvVar + "` defined so we can't guess the Jenkins build URL");
+                            warnIfInCDBuild("Cannot auto-default BUILD_URL as there is no environment variable `" + userEnvVar + "` defined so we can't guess the Jenkins build URL");
                         }
                     }
                 }
@@ -409,20 +465,25 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
                     } catch (Throwable e) {
                         Throwable cause = e;
 
+                        boolean notFound = false;
                         boolean connectError = false;
                         Iterable<Throwable> it = createExceptionIterable(e);
                         for (Throwable t : it) {
                             connectError = t instanceof ConnectException || "No route to host".equals(t.getMessage());
-                            if (connectError) {
+                            notFound = t instanceof IllegalArgumentException || t.getMessage() != null && t.getMessage().startsWith("No kubernetes service could be found for name");
+                            if (connectError || notFound) {
                                 cause = t;
                                 break;
                             }
                         }
 
                         if (connectError) {
-                            getLog().warn("Cannot connect to Kubernetes to find jenkins service URL: " + cause.getMessage());
+                            warnIfInCDBuild("Cannot connect to Kubernetes to find jenkins service URL: " + cause.getMessage());
+                        } else if (notFound) {
+                            // the message from the exception is good as-is
+                            warnIfInCDBuild(cause.getMessage());
                         } else {
-                            getLog().warn("Cannot find jenkins service URL: " + cause, cause);
+                            warnIfInCDBuild("Cannot find jenkins service URL: " + cause, cause);
                         }
                     }
                 }
@@ -432,7 +493,7 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
                 if (Strings.isNotBlank(buildId)) {
                     jobUrl = URLUtils.pathJoin(jobUrl, buildId);
                 } else {
-                    getLog().warn("Cannot find BUILD_ID to create a specific jenkins build URL. So using: " + jobUrl);
+                    warnIfInCDBuild("Cannot find BUILD_ID to create a specific jenkins build URL. So using: " + jobUrl);
                 }
             }
             return jobUrl;
@@ -441,13 +502,20 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
                 try {
                     // this requires online access to kubernetes so we should silently fail if no connection
                     String gogsUrl = KubernetesHelper.getServiceURLInCurrentNamespace(getKubernetes(), ServiceNames.GOGS, "http", null, true);
-                    return URLUtils.pathJoin(gogsUrl, username, repoName);
+                    String rootGitUrl = URLUtils.pathJoin(gogsUrl, username, repoName);
+                    String gitCommitId = getGitCommitId(envVarName, basedir);
+                    if (Strings.isNotBlank(gitCommitId)) {
+                        rootGitUrl = URLUtils.pathJoin(rootGitUrl, "commit", gitCommitId);
+                    }
+                    return rootGitUrl;
                 } catch (Throwable e) {
                     Throwable cause = e;
 
+                    boolean notFound = false;
                     boolean connectError = false;
                     Iterable<Throwable> it = createExceptionIterable(e);
                     for (Throwable t : it) {
+                        notFound = t instanceof IllegalArgumentException || t.getMessage() != null && t.getMessage().startsWith("No kubernetes service could be found for name");
                         connectError = t instanceof ConnectException || "No route to host".equals(t.getMessage());
                         if (connectError) {
                             cause = t;
@@ -456,13 +524,16 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
                     }
 
                     if (connectError) {
-                        getLog().warn("Cannot connect to Kubernetes to find gogs service URL: " + cause.getMessage());
+                        warnIfInCDBuild("Cannot connect to Kubernetes to find gogs service URL: " + cause.getMessage());
+                    } else if (notFound) {
+                        // the message from the exception is good as-is
+                        warnIfInCDBuild(cause.getMessage());
                     } else {
-                        getLog().warn("Cannot find gogs service URL: " + cause, cause);
+                        warnIfInCDBuild("Cannot find gogs service URL: " + cause, cause);
                     }
                 }
             } else {
-                getLog().warn("Cannot auto-default GIT_URL as there is no environment variable `" + userEnvVar + "` defined so we can't guess the Gogs build URL");
+                warnIfInCDBuild("Cannot auto-default GIT_URL as there is no environment variable `" + userEnvVar + "` defined so we can't guess the Gogs build URL");
             }
 /*
             TODO this is the git clone url; while we could try convert from it to a browse URL its probably too flaky?
@@ -470,7 +541,7 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
             try {
                 url = GitHelpers.extractGitUrl(basedir);
             } catch (IOException e) {
-                getLog().warn("Failed to find git url in directory " + basedir + ". " + e, e);
+                warnIfInCDBuild("Failed to find git url in directory " + basedir + ". " + e, e);
             }
             if (Strings.isNotBlank(url)) {
                 // for gogs / github style repos we trim the .git suffix for browsing
@@ -478,32 +549,77 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
             }
 */
         } else if (Objects.equal("GIT_COMMIT", envVarName)) {
-            try (Repository repository = getGitRepository(basedir, envVarName)) {
-                if (repository != null) {
-                    String fullBranch = repository.getFullBranch();
-                    if (fullBranch == null) {
-                        fullBranch = repository.getBranch();
-                    }
-                    if (fullBranch != null) {
-                        ObjectId id = repository.resolve(fullBranch);
-                        if (id != null) {
-                            return id.getName();
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                getLog().warn("Failed to find git commit id. " + e, e);
-            }
+            return getGitCommitId(envVarName, basedir);
         } else if (Objects.equal("GIT_BRANCH", envVarName)) {
-            try (Repository repository = getGitRepository(basedir, envVarName)) {
+            Repository repository = getGitRepository(basedir, envVarName);
+            try {
                 if (repository != null) {
                     return repository.getBranch();
                 }
             } catch (IOException e) {
-                getLog().warn("Failed to find git commit id. " + e, e);
+                warnIfInCDBuild("Failed to find git commit id. " + e, e);
+            } finally {
+                if (repository != null) {
+                    repository.close();
+                }
             }
         }
         return null;
+    }
+
+    protected String getGitCommitId(String envVarName, File basedir) {
+        Repository repository = getGitRepository(basedir, envVarName);
+        try {
+            if (repository != null) {
+                getLog().info("Looking at repo with directory " + repository.getDirectory());
+                Iterable<RevCommit> logs = new Git(repository).log().call();
+                for (RevCommit rev : logs) {
+                    return rev.getName();
+                }
+                warnIfInCDBuild("Cannot default " + envVarName + " no commits could be found");
+            } else {
+                warnIfInCDBuild("Cannot default " + envVarName + " as no git repository could be found");
+            }
+        } catch (Exception e) {
+            warnIfInCDBuild("Failed to find git commit id. " + e, e);
+        } finally {
+            if (repository != null) {
+                try {
+                    repository.close();
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
+        }
+        return null;
+    }
+
+    protected void warnIfInCDBuild(String message) {
+        if (isInCDBuild()) {
+            getLog().warn(message);
+        } else {
+            getLog().debug(message);
+        }
+    }
+
+    /**
+     * Returns true if the current build is being run inside a CI / CD build in which case
+     * lets warn if we cannot detect things like the GIT commit or Jenkins build server URL
+     */
+    protected boolean isInCDBuild() {
+        if (cdBuild) {
+            return true;
+        }
+        String envVar = System.getenv(cdEnvVarName);
+        return Strings.isNotBlank(envVar);
+    }
+
+    protected void warnIfInCDBuild(String message, Throwable exception) {
+        if (isInCDBuild()) {
+            getLog().warn(message, exception);
+        } else {
+            getLog().debug(message, exception);
+        }
     }
 
     /**
@@ -530,23 +646,22 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
 
     protected Repository getGitRepository(File basedir, String envVarName) {
         try {
-            Repository repository = null;
-/*
-            File gitFolder = GitHelpers.findGitRootFolder(basedir);
-            if (gitFolder != null) {
+            File gitFolder = GitHelpers.findGitFolder(basedir);
+            if (gitFolder == null) {
+                warnIfInCDBuild("Could not find .git folder based on the current basedir of " + basedir);
+                return null;
             }
-*/
             FileRepositoryBuilder builder = new FileRepositoryBuilder();
-            repository = builder.setGitDir(basedir)
-                    .readEnvironment() // scan environment GIT_* variables
-                    .findGitDir() // scan up the file system tree
+            Repository repository = builder
+                    .readEnvironment()
+                    .setGitDir(gitFolder)
                     .build();
             if (repository == null) {
-                getLog().warn("Cannot create default value for $" + envVarName + " as no .git/config file could be found");
+                warnIfInCDBuild("Cannot create default value for $" + envVarName + " as no .git/config file could be found");
             }
             return repository;
-        } catch (IOException e) {
-            getLog().warn("Failed to initialise Git Repository: " + e, e);
+        } catch (Exception e) {
+            warnIfInCDBuild("Failed to initialise Git Repository: " + e, e);
             return null;
         }
     }
@@ -620,7 +735,7 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
     public JsonSchema getEnvironmentVariableJsonSchema() throws IOException, MojoExecutionException {
         JsonSchema schema = JsonSchemas.loadEnvironmentSchemas(getCompileClassLoader(), getProject().getBuild().getOutputDirectory());
         if (schema == null) {
-            getLog().info("No environment schemas found for file: " + JsonSchemas.ENVIRONMENT_SCHEMA_FILE);
+            getLog().debug("No environment schemas found for file: " + JsonSchemas.ENVIRONMENT_SCHEMA_FILE);
             schema = new JsonSchema();
         }
         Map<String, String> envs = getEnvironmentVariableProperties();
@@ -739,40 +854,8 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
         }
     }
 
-    /**
-     * Returns the root project folder
-     */
-    protected File getRootProjectFolder() {
-        File answer = null;
-        MavenProject project = getProject();
-        while (project != null) {
-            File basedir = project.getBasedir();
-            if (basedir != null) {
-                answer = basedir;
-            }
-            project = project.getParent();
-        }
-        return answer;
-    }
-
-    /**
-     * Returns the root project folder
-     */
-    protected MavenProject getRootProject() {
-        MavenProject project = getProject();
-        while (project != null) {
-            MavenProject parent = project.getParent();
-            if (parent == null) {
-                break;
-            }
-            project = parent;
-        }
-        return project;
-    }
-
     public String getDockerImage() {
-        MavenProject project = getProject();
-        return project.getProperties().getProperty("docker.image");
+        return dockerImage;
     }
 
     Set<File> getDependencies() throws IOException {
@@ -828,9 +911,7 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
         List<io.fabric8.openshift.api.model.Parameter> parameters = template.getParameters();
         MavenProject project = getProject();
         if (parameters != null && project != null) {
-            Properties properties = project.getProperties();
-            properties.putAll(project.getProperties());
-            properties.putAll(System.getProperties());
+            Properties properties = getProjectAndFabric8Properties(project);
             boolean missingProperty = false;
             for (io.fabric8.openshift.api.model.Parameter parameter : parameters) {
                 String parameterName = parameter.getName();
@@ -848,5 +929,13 @@ public abstract class AbstractFabric8Mojo extends AbstractNamespacedMojo {
                 getLog().debug("Current properties " + new TreeSet<>(properties.keySet()));
             }
         }
+    }
+
+    protected Properties getProjectAndFabric8Properties(MavenProject project) {
+        Properties properties = project.getProperties();
+        properties.putAll(project.getProperties());
+        // let system properties override so we can read from the command line
+        properties.putAll(System.getProperties());
+        return properties;
     }
 }
