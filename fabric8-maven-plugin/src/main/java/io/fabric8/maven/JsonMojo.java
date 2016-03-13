@@ -342,6 +342,12 @@ public class JsonMojo extends AbstractFabric8Mojo {
     private String projectName;
 
     /**
+     * The project label used in the generated Kubernetes JSON dependencies template
+     */
+    @Parameter(property = "fabric8.combineJson.project", defaultValue = "${project.artifactId}")
+    private String combineProjectName;
+
+    /**
      * The group label used in the generated Kubernetes JSON template
      */
     @Parameter(property = "fabric8.label.group", defaultValue = "${project.groupId}")
@@ -555,7 +561,7 @@ public class JsonMojo extends AbstractFabric8Mojo {
             	if (generateJson) {
             		generateKubernetesJson(json);
             		if (combineDependencies) {
-            			combineDependentJsonFiles(json);
+            			combineDependentJsonFiles(getKubernetesCombineJson() == null ? json : getKubernetesCombineJson());
             		}
             		if (kubernetesExtraJson != null && kubernetesExtraJson.exists()) {
             			combineJsonFiles(json, kubernetesExtraJson);
@@ -624,7 +630,7 @@ public class JsonMojo extends AbstractFabric8Mojo {
             }
             if (combinedJson instanceof Template) {
                 Template template = (Template) combinedJson;
-                String templateName = getProjectName();
+                String templateName = getCombineProjectName();
                 setName(template, templateName);
                 configureTemplateDescriptionAndIcon(template, getIconUrl());
 
@@ -1311,10 +1317,10 @@ public class JsonMojo extends AbstractFabric8Mojo {
         }
 
         if (Strings.isNullOrBlank(answer)) {
-            // maybe its a common icon
-            String commonRef = asCommonIconRef(iconRef);
-            if (commonRef != null) {
-                answer = URLUtils.pathJoin("https://cdn.rawgit.com/fabric8io/fabric8", iconBranch, "/fabric8-maven-plugin/src/main/resources/", commonRef);
+            // maybe its a common icon that is embedded in fabric8-console
+            String embeddedIcon = embeddedIconsInConsole(iconRef, "img/icons/");
+            if (embeddedIcon != null) {
+                return embeddedIcon;
             }
         }
 
@@ -1375,10 +1381,9 @@ public class JsonMojo extends AbstractFabric8Mojo {
                     }
                 }
             } else {
-                String commonRef = asCommonIconRef(iconRef);
-                if (commonRef != null) {
-                    String answer = URLUtils.pathJoin("https://cdn.rawgit.com/fabric8io/fabric8", iconBranch, "/fabric8-maven-plugin/src/main/resources/", commonRef);
-                    return answer;
+                String embeddedIcon = embeddedIconsInConsole(iconRef, "img/icons/");
+                if (embeddedIcon != null) {
+                    return embeddedIcon;
                 } else {
                     getLog().warn("Cannot find url for icon to use " + iconUrl);
                 }
@@ -1387,7 +1392,14 @@ public class JsonMojo extends AbstractFabric8Mojo {
         return null;
     }
 
-    protected String asCommonIconRef(String iconRef) {
+    /**
+     * To use embedded icons provided by the fabric8-console
+     *
+     * @param iconRef  name of icon file
+     * @param prefix   prefix location for the icons in the fabric8-console
+     * @return the embedded icon ref, or <tt>null</tt> if no embedded icon found to be used
+     */
+    protected String embeddedIconsInConsole(String iconRef, String prefix) {
         if (iconRef == null) {
             return null;
         }
@@ -1397,27 +1409,85 @@ public class JsonMojo extends AbstractFabric8Mojo {
         }
 
         if (iconRef.contains("activemq")) {
-            return "icons/activemq.svg";
+            return prefix + "activemq.svg";
+        } else if (iconRef.contains("apiman")) {
+            return prefix + "apiman.png";
+        } else if (iconRef.contains("api-registry")) {
+            return prefix + "api-registry.svg";
+        } else if (iconRef.contains("brackets")) {
+            return prefix + "brackets.svg";
         } else if (iconRef.contains("camel")) {
-            return "icons/camel.svg";
+            return prefix + "camel.svg";
+        } else if (iconRef.contains("chaos-monkey")) {
+            return prefix + "chaos-monkey.png";
+        } else if (iconRef.contains("docker-registry")) {
+            return prefix + "docker-registry.png";
+        } else if (iconRef.contains("elasticsearch")) {
+            return prefix + "elasticsearch.png";
+        } else if (iconRef.contains("fluentd")) {
+            return prefix + "fluentd.png";
+        } else if (iconRef.contains("gerrit")) {
+            return prefix + "gerrit.png";
+        } else if (iconRef.contains("gitlab")) {
+            return prefix + "gitlab.svg";
+        } else if (iconRef.contains("gogs")) {
+            return prefix + "gogs.png";
+        } else if (iconRef.contains("grafana")) {
+            return prefix + "grafana.png";
+        } else if (iconRef.contains("hubot-irc")) {
+            return prefix + "hubot-irc.png";
+        } else if (iconRef.contains("hubot-letschat")) {
+            return prefix + "hubot-letschat.png";
+        } else if (iconRef.contains("hubot-notifier")) {
+            return prefix + "hubot-notifier.png";
+        } else if (iconRef.contains("hubot-slack")) {
+            return prefix + "hubot-slack.png";
+        } else if (iconRef.contains("image-linker")) {
+            return prefix + "image-linker.svg";
+        } else if (iconRef.contains("javascript")) {
+            return prefix + "javascript.png";
         } else if (iconRef.contains("java")) {
-            return "icons/java.svg";
+            return prefix + "java.svg";
+        } else if (iconRef.contains("jenkins")) {
+            return prefix + "jenkins.svg";
         } else if (iconRef.contains("jetty")) {
-            return "icons/jetty.svg";
+            return prefix + "jetty.svg";
         } else if (iconRef.contains("karaf")) {
-            return "icons/karaf.svg";
+            return prefix + "karaf.svg";
+        } else if (iconRef.contains("keycloak")) {
+            return prefix + "keycloak.svg";
+        } else if (iconRef.contains("kibana")) {
+            return prefix + "kibana.svg";
+        } else if (iconRef.contains("kiwiirc")) {
+            return prefix + "kiwiirc.png";
+        } else if (iconRef.contains("letschat")) {
+            return prefix + "letschat.png";
         } else if (iconRef.contains("mule")) {
-            return "icons/mule.svg";
+            return prefix + "mule.svg";
+        } else if (iconRef.contains("nexus")) {
+            return prefix + "nexus.png";
+        } else if (iconRef.contains("node")) {
+            return prefix + "node.svg";
+        } else if (iconRef.contains("orion")) {
+            return prefix + "orion.png";
+        } else if (iconRef.contains("prometheus")) {
+            return prefix + "prometheus.png";
+        } else if (iconRef.contains("django") || iconRef.contains("python")) {
+            return prefix + "python.png";
         } else if (iconRef.contains("spring-boot")) {
-            return "icons/spring-boot.svg";
+            return prefix + "spring-boot.svg";
+        } else if (iconRef.contains("taiga")) {
+            return prefix + "taiga.png";
         } else if (iconRef.contains("tomcat")) {
-            return "icons/tomcat.svg";
+            return prefix + "tomcat.svg";
         } else if (iconRef.contains("tomee")) {
-            return "icons/tomee.svg";
-        } else if (iconRef.contains("weld")) {
-            return "icons/weld.svg";
+            return prefix + "tomee.svg";
+        } else if (iconRef.contains("vertx")) {
+            return prefix + "vertx.svg";
         } else if (iconRef.contains("wildfly")) {
-            return "icons/wildfly.svg";
+            return prefix + "wildfly.svg";
+        } else if (iconRef.contains("weld")) {
+            return prefix + "weld.svg";
         }
 
         return null;
@@ -1559,6 +1629,14 @@ public class JsonMojo extends AbstractFabric8Mojo {
 
     public void setProjectName(String projectName) {
         this.projectName = projectName;
+    }
+
+    public String getCombineProjectName() {
+        return combineProjectName;
+    }
+
+    public void setCombineProjectName(String combineProjectName) {
+        this.combineProjectName = combineProjectName;
     }
 
     public String getGroupName() {

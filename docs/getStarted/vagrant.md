@@ -77,7 +77,7 @@ v.cpus = 2
 To update the RAM you can use an environment variable. For example to run the `cd-pipeline` application we recommend about 8Gb of RAM:
 
 ```
-export FABRIC8_VM_MEMORY=8000
+export FABRIC8_VM_MEMORY=8192
 ```
 
 Then follow the on screen instructions.
@@ -117,15 +117,17 @@ on your installation.
   or other Kubernetes resources just drag and drop the JSON file onto
   the `Apps` tab!
 * You can download the
-  [fabric8 templates 2.2.89 distribution](http://repo1.maven.org/maven2/io/fabric8/devops/distro/distro/2.2.89/distro-2.2.89-templates.zip)
+  [fabric8 templates 2.2.96 distribution](http://repo1.maven.org/maven2/io/fabric8/devops/distro/distro/2.2.96/distro-2.2.96-templates.zip)
   unzip and drag the JSON files you want to install onto the
   [fabric8 console](http://fabric8.io/guide/console.html) and they
   should appear on the `Run...` page
 * You can install or upgrade application using the [helm command line tool](http://fabric8.io/guide/helm.html)     
 * You can also install other OpenShift Templates or Kubernetes
   resources via the **oc** command line tool:
-
+```
     oc create -f jsonOr YamlFileOrUrl
+```
+ * Typically the default username/password for various applications is `admin/admin` or `gogsadmin/RedHat$1`.  Try these espcially for  secrets to get the pipeline to work with GOGS. 
 
 ### Setting up your local machine
 
@@ -300,7 +302,7 @@ For further information see:
 and
 [ioquatix/rubydns#55](https://github.com/ioquatix/rubydns/issues/55).
 
-#### Can not find / ping "vagrat.f8" from OS X
+#### Can not find / ping "vagrant.f8" from OS X
 
 In some rare case the DNS cache can get stale when you are updating
 your Vagrant or when doing restarts of the VM on OS X. In that case OS
