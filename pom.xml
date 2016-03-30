@@ -26,7 +26,7 @@
 
     <groupId>io.fabric8</groupId>
     <artifactId>fabric8-project</artifactId>
-    <version>2.2.97-SNAPSHOT</version>
+    <version>2.2.101-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Fabric8</name>
@@ -74,7 +74,7 @@
 
         <!-- upstream vs redhat versions of dependencies goes here -->
         <activemq.version>5.12.1</activemq.version>
-        <camel.version>2.16.2</camel.version>
+        <camel.version>2.17.0</camel.version>
         <cxf.version>3.1.4</cxf.version>
         <cxf.plugin.version>3.1.5</cxf.plugin.version>
 
@@ -83,7 +83,7 @@
         <jansi.version>1.11</jansi.version>
         <jolokia.version>1.3.3</jolokia.version>
         <jgroups.version>3.6.8.Final</jgroups.version>
-        <jsonschema2pojo.version>0.4.21</jsonschema2pojo.version>
+        <jsonschema2pojo.version>0.4.22</jsonschema2pojo.version>
         <snakeyaml.version>1.17</snakeyaml.version>
 	<!-- swagger 1.5.7 doesnt work with fabric8-cxf-plugin -->
         <swagger.jaxrs.version>1.5.5</swagger.jaxrs.version>
@@ -118,7 +118,7 @@
         <exec-maven-plugin.version>1.4.0</exec-maven-plugin.version>
         <felix-scr-annotations.version>1.9.12</felix-scr-annotations.version>
         <felix-scr-plugin.version>1.21.0</felix-scr-plugin.version>
-        <mockwebserver.version>20130706</mockwebserver.version>
+        <okhttp.version>2.7.5</okhttp.version>
         <guava.version>19.0</guava.version>
         <httpclient.version>4.5.2</httpclient.version>
         <jackson2.version>2.6.4</jackson2.version>
@@ -133,7 +133,7 @@
         <jgit.version>4.2.0.201601211800-r</jgit.version>
         <json.version>20160212</json.version>
         <junit.version>4.12</junit.version>
-        <kubernetes-client.version>1.3.72</kubernetes-client.version>
+        <kubernetes-client.version>1.3.75</kubernetes-client.version>
         <log4j.version>1.2.17</log4j.version>
         <lombok.version>1.16.8</lombok.version>
         <maven.enforcer.version>3.2.3</maven.enforcer.version>
@@ -149,15 +149,16 @@
         <plexus-utils.version>3.0.22</plexus-utils.version>
         <phantomjsdriver.version>1.2.0</phantomjsdriver.version>
         <reflections.version>0.9.10</reflections.version>
-        <selenium.version>2.52.0</selenium.version>
+        <selenium.version>2.53.0</selenium.version>
         <selenium.firefox.driver.version>2.28.0</selenium.firefox.driver.version>
+        <selenium.htmlunit.driver.version>2.20</selenium.htmlunit.driver.version>
         <servlet-api.version>2.5</servlet-api.version>
         <servlet30-api.version>3.0.1</servlet30-api.version>
         <shrinkwrap-resolver.version>2.2.2</shrinkwrap-resolver.version>
         <slf4j.version>1.7.12</slf4j.version>
-        <spring.version>4.2.4.RELEASE</spring.version>
+        <spring.version>4.2.5.RELEASE</spring.version>
         <spring.boot.version>1.2.7.RELEASE</spring.boot.version>
-        <sundrio.version>0.1.25</sundrio.version>
+        <sundrio.version>0.1.26</sundrio.version>
         <validation-api.version>1.1.0.Final</validation-api.version>
         <zookeeper.version>3.4.8</zookeeper.version>
 
@@ -175,7 +176,7 @@
             org.springframework.*;version="[3.2,5)",
             org.apache.commons.logging.*;version="[1.1,2)",
             org.apache.activemq.*;version="[5.11,6)",
-            org.apache.camel.*;version="[2.15,3)",
+            org.apache.camel.*;version="[2.17,3)",
         </fuse.osgi.import.defaults>
         <fuse.osgi.import.before.defaults />
         <fuse.osgi.import.additional />
@@ -818,9 +819,9 @@
             </dependency>
 
             <dependency>
-                <groupId>com.google.mockwebserver</groupId>
+                <groupId>com.squareup.okhttp</groupId>
                 <artifactId>mockwebserver</artifactId>
-                <version>${mockwebserver.version}</version>
+                <version>${okhttp.version}</version>
                 <scope>test</scope>
             </dependency>
 
@@ -1617,7 +1618,7 @@
         <profile>
             <id>camel-snapshot</id>
             <properties>
-                <camel.version>2.17-SNAPSHOT</camel.version>
+                <camel.version>2.18-SNAPSHOT</camel.version>
             </properties>
         </profile>
         <profile>

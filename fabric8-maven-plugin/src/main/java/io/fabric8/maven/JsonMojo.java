@@ -104,7 +104,7 @@ import static io.fabric8.kubernetes.api.KubernetesHelper.getName;
 import static io.fabric8.kubernetes.api.KubernetesHelper.setName;
 import static io.fabric8.utils.Files.guessMediaType;
 import static io.fabric8.utils.PropertiesHelper.findPropertiesWithPrefix;
-import static io.fabric8.utils.PropertiesHelper.getLong;
+import static io.fabric8.utils.PropertiesHelper.getInteger;
 
 /**
  * Generates or copies the Kubernetes JSON file and attaches it to the build so its
@@ -464,6 +464,12 @@ public class JsonMojo extends AbstractFabric8Mojo {
 
     @Parameter(property = "fabric8.serviceAccount")
     protected String serviceAccount;
+
+    /**
+     * Should we create the ServiceAccount resource as part of the build
+     */
+    @Parameter(property = "fabric8.serviceAccountCreate")
+    private boolean createServiceAccount;
 
     /**
      * The properties file used to specify the OpenShift Template parameter values and descriptions. The properties file should be of the form
@@ -1157,7 +1163,7 @@ public class JsonMojo extends AbstractFabric8Mojo {
             secrets.add(secretRef);
         }
 
-        if (!secrets.isEmpty()) {
+        if (!secrets.isEmpty() || createServiceAccount) {
             if (Strings.isNullOrBlank(serviceAccount)) {
                 serviceAccount = getProject().getArtifactId();
             }
@@ -1408,6 +1414,11 @@ public class JsonMojo extends AbstractFabric8Mojo {
             iconRef = iconRef.substring(6);
         }
 
+        // special for fabric8 as its in a different dir
+        if (iconRef.contains("fabric8")) {
+            return "img/fabric8_icon.svg";
+        }
+
         if (iconRef.contains("activemq")) {
             return prefix + "activemq.svg";
         } else if (iconRef.contains("apiman")) {
@@ -1426,6 +1437,8 @@ public class JsonMojo extends AbstractFabric8Mojo {
             return prefix + "elasticsearch.png";
         } else if (iconRef.contains("fluentd")) {
             return prefix + "fluentd.png";
+        } else if (iconRef.contains("forge")) {
+            return prefix + "forge.svg";
         } else if (iconRef.contains("gerrit")) {
             return prefix + "gerrit.png";
         } else if (iconRef.contains("gitlab")) {
@@ -1504,11 +1517,11 @@ public class JsonMojo extends AbstractFabric8Mojo {
     protected Probe getProbe(String prefix) {
         Probe probe = new Probe();
         Properties properties = getProjectAndFabric8Properties(getProject());
-        Long initialDelaySeconds = getLong(properties, prefix + ".initialDelaySeconds");
+        Integer initialDelaySeconds = getInteger(properties, prefix + ".initialDelaySeconds");
         if (initialDelaySeconds != null) {
             probe.setInitialDelaySeconds(initialDelaySeconds);
         }
-        Long timeoutSeconds = getLong(properties, prefix + ".timeoutSeconds");
+        Integer timeoutSeconds = getInteger(properties, prefix + ".timeoutSeconds");
         if (timeoutSeconds != null) {
             probe.setTimeoutSeconds(timeoutSeconds);
         }
